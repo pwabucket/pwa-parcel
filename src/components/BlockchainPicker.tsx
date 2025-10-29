@@ -1,11 +1,5 @@
-import { blockchainIcons } from "../resources/icons";
+import { blockchains } from "../resources/blockchains";
 import { BasePicker } from "./BasePicker";
-
-const parcels = [
-  { id: "bsc", name: "Binance Smart Chain" },
-  { id: "ton", name: "The Open Network" },
-  { id: "base", name: "Base" },
-];
 
 interface BlockchainPickerProps {
   onSelect?: (blockchainId: string) => void;
@@ -16,10 +10,10 @@ const BlockchainPicker = ({ onSelect }: BlockchainPickerProps) => {
     <>
       <BasePicker
         title="Select a Blockchain"
-        items={parcels.map((parcel) => ({
-          id: parcel.id,
-          name: parcel.name,
-          icon: blockchainIcons[parcel.id],
+        items={Object.values(blockchains).map((blockchain) => ({
+          id: blockchain.id,
+          name: blockchain.name,
+          icon: blockchain.icon,
         }))}
         onSelect={onSelect}
       />
