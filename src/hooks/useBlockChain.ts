@@ -37,6 +37,7 @@ const useBlockchain = () => {
   const isAmountSet = Boolean(isTokenSelected && amount);
   const isRecipientsSet = Boolean(
     isAmountSet &&
+      recipients.length > 0 &&
       recipients.every((addr: string) =>
         location.state?.recipients?.includes(addr)
       )
