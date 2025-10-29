@@ -1,5 +1,21 @@
+import type { Token } from "../../types";
+
 export const id = "bsc";
 export const name = "Binance Smart Chain";
-export { bscTokens as tokens } from "./bscTokens";
-export { BSCCustomTokenForm as CustomTokenForm } from "./BSCCustomTokenForm";
-export { BSCWalletForm as WalletForm } from "./BSCWalletForm";
+export const tokens: Token[] = [
+  {
+    id: "bnb",
+    name: "Binance Coin",
+    symbol: "BNB",
+  },
+  {
+    id: "usdt",
+    name: "Tether",
+    symbol: "USDT",
+    decimals: 18,
+    address: "0x55d398326f99059ff775485246999027b3197955",
+  },
+];
+
+export { EVMCustomTokenForm as CustomTokenForm } from "../../partials/evm/EVMCustomTokenForm";
+export { EVMWalletForm as WalletForm } from "../../partials/evm/EVMWalletForm";

@@ -11,7 +11,7 @@ const schema = yup.object({
   address: yup.string().required("Token address is required"),
 });
 
-const BSCCustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
+const EVMCustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -57,4 +57,4 @@ const BSCCustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
   );
 };
 
-export { BSCCustomTokenForm };
+export { EVMCustomTokenForm };

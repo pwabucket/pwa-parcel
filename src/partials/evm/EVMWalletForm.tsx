@@ -22,7 +22,7 @@ const schema = yup.object({
   privateKey: yup.string().required("Private key is required"),
 });
 
-const BSCWalletForm = ({ onSubmit }: WalletFormProps) => {
+const EVMWalletForm = ({ onSubmit }: WalletFormProps) => {
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -33,6 +33,7 @@ const BSCWalletForm = ({ onSubmit }: WalletFormProps) => {
   const handleFormSubmit = (data: { privateKey: string }) => {
     console.log("BSC Wallet Private Key:", data.privateKey);
     onSubmit({
+      address: getWalletAddressFromPrivateKey(data.privateKey),
       privateKey: data.privateKey,
     });
   };
@@ -70,4 +71,4 @@ const BSCWalletForm = ({ onSubmit }: WalletFormProps) => {
   );
 };
 
-export { BSCWalletForm };
+export { EVMWalletForm };
