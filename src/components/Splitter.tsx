@@ -75,6 +75,12 @@ const Splitter = ({ setup }: SplitterProps) => {
           token={token!}
           totalRecipients={recipients.length}
         />
+
+        {wallet && (
+          <p className="text-lime-500 break-all font-bold font-mono text-center text-sm">
+            Wallet Address: {wallet.address}
+          </p>
+        )}
       </div>
 
       {/* Wallet Setup Dialog */}
