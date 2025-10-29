@@ -1,3 +1,4 @@
+import { EVMParcel } from "../../parcels/EVMParcel";
 import type { Token } from "../../types";
 
 export const id = "bsc";
@@ -16,6 +17,14 @@ export const tokens: Token[] = [
     address: "0x55d398326f99059ff775485246999027b3197955",
   },
 ];
+
+export class Parcel extends EVMParcel {
+  constructor() {
+    super({
+      network: "bsc",
+    });
+  }
+}
 
 export { EVMCustomTokenForm as CustomTokenForm } from "../../partials/evm/EVMCustomTokenForm";
 export { EVMWalletForm as WalletForm } from "../../partials/evm/EVMWalletForm";

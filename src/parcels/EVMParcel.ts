@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import type { Parcel, Token, Wallet } from "../types";
 
 /* EVM Networks Configuration */
 export const NETWORKS = {
@@ -539,7 +540,7 @@ export class EVMWallet {
 }
 
 /* EVMParcel class - orchestrates multiple operations using EVMWallet */
-export class EVMParcel {
+export class EVMParcel implements Parcel {
   private network: NetworkName | null;
   private mainnet: boolean;
   private rpcUrl?: string;
@@ -605,38 +606,45 @@ export class EVMParcel {
   }
 
   /* Split amount equally among multiple addresses */
-  async split(
-    privateKey: string,
-    addresses: string[],
-    totalAmount: string,
+  async split({
+    wallet,
+    addresses,
+    token,
+    amount,
+    options = {},
+  }: {
+    wallet: Wallet;
+    addresses: string[];
+    token: Token;
+    amount: string;
     options?: {
       gasPrice?: bigint;
       contractAddress?: string /* If provided, treats as token transfer */;
-    }
-  ): Promise<TransferResult[]> {
+    };
+  }): Promise<TransferResult[]> {
     if (addresses.length === 0) {
       throw new Error("No addresses provided");
     }
 
     await this.initializeNetwork(); /* Ensure shared provider is initialized */
 
-    const wallet = this.createWallet(privateKey);
-    await wallet.initializeNonce(); /* Initialize nonce tracking */
+    const walletInstance = this.createWallet(wallet.privateKey!);
+    await walletInstance.initializeNonce(); /* Initialize nonce tracking */
 
-    const perAddressAmount = options?.contractAddress
-      ? (parseFloat(totalAmount) / addresses.length).toString()
-      : (parseFloat(totalAmount) / addresses.length).toFixed(18);
+    const perAddressAmount = token.address
+      ? (parseFloat(amount) / addresses.length).toString()
+      : (parseFloat(amount) / addresses.length).toFixed(18);
 
     /* Create split transfer promises for parallel execution */
     const transferPromises = addresses.map((address) =>
-      options?.contractAddress
-        ? wallet.splitTransferToken(
-            options.contractAddress,
+      token.address
+        ? walletInstance.splitTransferToken(
+            token.address,
             address,
             perAddressAmount,
             options?.gasPrice
           )
-        : wallet.splitTransferNative(
+        : walletInstance.splitTransferNative(
             address,
             perAddressAmount,
             options?.gasPrice

@@ -28,4 +28,26 @@ export interface Blockchain {
   tokens: Token[];
   CustomTokenForm: React.ComponentType<CustomTokenFormProps>;
   WalletForm: React.ComponentType<WalletFormProps>;
+  Parcel: new () => Parcel;
+}
+
+export interface Parcel {
+  split: ({
+    wallet,
+    addresses,
+    token,
+    amount,
+  }: {
+    wallet: Wallet;
+    addresses: string[];
+    token: Token;
+    amount: string;
+  }) => Promise<SplitResult[]>;
+}
+
+export interface SplitResult {
+  to: string;
+  txHash: string;
+  status: boolean;
+  error?: string | unknown;
 }
