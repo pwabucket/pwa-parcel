@@ -657,40 +657,44 @@ export class EVMParcel implements Parcel {
   }
 
   /* Merge (collect) from multiple addresses to a single address */
-  async merge(
-    privateKeys: string[],
-    targetAddress: string,
+  async merge({
+    senders,
+    receiver,
+    token,
+    amount,
+    options = {},
+  }: {
+    senders: Wallet[];
+    receiver: string;
+    token: Token;
+    amount?: string;
     options?: {
       gasPrice?: bigint;
-      contractAddress?: string /* If provided, treats as token transfer */;
-      amount?: string /* Specific amount to merge, if not specified merge everything */;
-    }
-  ): Promise<TransferResult[]> {
-    if (privateKeys.length === 0) {
-      throw new Error("No private keys provided");
+    };
+  }): Promise<TransferResult[]> {
+    if (senders.length === 0) {
+      throw new Error("No wallets provided");
     }
 
     /* Create transfer promises for parallel execution */
-    const transferPromises = privateKeys.map(async (privateKey) => {
-      const wallet = this.createWallet(privateKey);
+    const transferPromises = senders.map(async (sender) => {
+      const wallet = this.createWallet(sender.privateKey!);
 
       try {
-        let amount: string;
+        let amountToSend: string;
 
-        if (options?.contractAddress) {
+        if (token.address) {
           /* Token merge */
-          if (options?.amount) {
-            amount = options.amount;
+          if (amount) {
+            amountToSend = amount;
           } else {
-            const balance = await wallet.getTokenBalance(
-              options.contractAddress
-            );
-            amount = balance;
+            const balance = await wallet.getTokenBalance(token.address);
+            amountToSend = balance;
           }
         } else {
           /* Native merge */
-          if (options?.amount) {
-            amount = options.amount;
+          if (amount) {
+            amountToSend = amount;
           } else {
             /* Merge everything but deduct estimated gas cost */
             const balance = await wallet.getNativeBalance();
@@ -705,34 +709,34 @@ export class EVMParcel implements Parcel {
             const availableWei = balanceWei - gasCost;
 
             if (availableWei <= 0n) {
-              amount = "0";
+              amountToSend = "0";
             } else {
-              amount = ethers.formatEther(availableWei);
+              amountToSend = ethers.formatEther(availableWei);
             }
           }
         }
 
-        if (parseFloat(amount) <= 0) {
+        if (parseFloat(amountToSend) <= 0) {
           return {
             status: false,
             txHash: "",
             from: await wallet.getAddress(),
-            to: targetAddress,
+            to: receiver,
             amount: "0",
             error: "Insufficient balance to merge",
           };
         }
 
-        const result = options?.contractAddress
+        const result = token.address
           ? await wallet.transferToken(
-              options.contractAddress,
-              targetAddress,
-              amount,
+              token.address,
+              receiver,
+              amountToSend,
               options?.gasPrice
             )
           : await wallet.transferNative(
-              targetAddress,
-              amount,
+              receiver,
+              amountToSend,
               options?.gasPrice
             );
 
@@ -742,7 +746,7 @@ export class EVMParcel implements Parcel {
           status: false,
           txHash: "",
           from: await wallet.getAddress(),
-          to: targetAddress,
+          to: receiver,
           amount: "0",
           error: error instanceof Error ? error.message : "Unknown error",
         };

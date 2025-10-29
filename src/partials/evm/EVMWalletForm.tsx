@@ -31,7 +31,7 @@ const EVMWalletForm = ({ onSubmit }: WalletFormProps) => {
   });
 
   const handleFormSubmit = (data: { privateKey: string }) => {
-    console.log("BSC Wallet Private Key:", data.privateKey);
+    console.log("EVM Wallet Private Key:", data.privateKey);
     onSubmit({
       address: getWalletAddressFromPrivateKey(data.privateKey),
       privateKey: data.privateKey,
@@ -65,7 +65,7 @@ const EVMWalletForm = ({ onSubmit }: WalletFormProps) => {
           )}
         />
 
-        <Button type="submit">Configure Wallet</Button>
+        <Button type="submit">Save</Button>
       </form>
     </FormProvider>
   );

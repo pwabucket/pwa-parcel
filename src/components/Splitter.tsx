@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainInfo } from "./BlockchainInfo";
 import { Button } from "./Button";
-import { RecipientsContainer } from "./RecipientsContainer";
+import { AddressesContainer } from "./AddressesContainer";
 import { SectionHeading } from "./SectionHeading";
 import { SplitInformation } from "./SplitInformation";
 import { SplitRecipient } from "./SplitRecipient";
@@ -95,7 +95,9 @@ const Splitter = ({ setup }: SplitterProps) => {
 
       {/* Split Button */}
       {mutation.isSuccess ? (
-        <p className="text-center text-green-500">Split successful!</p>
+        <p className="text-center text-purple-400 font-display text-2xl">
+          Split completed!
+        </p>
       ) : mutation.isError ? (
         <p className="text-center text-red-500">
           Split failed. Please try again.
@@ -114,7 +116,7 @@ const Splitter = ({ setup }: SplitterProps) => {
       <SectionHeading title={`Recipients (${recipients.length})`} />
 
       {/* Recipients List */}
-      <RecipientsContainer>
+      <AddressesContainer>
         {recipients.map((recipient, index) => (
           <SplitRecipient
             key={index}
@@ -125,7 +127,7 @@ const Splitter = ({ setup }: SplitterProps) => {
             result={mutation.data ? mutation.data[index] : undefined}
           />
         ))}
-      </RecipientsContainer>
+      </AddressesContainer>
     </div>
   );
 };

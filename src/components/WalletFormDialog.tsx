@@ -14,8 +14,8 @@ const WalletFormDialog = ({
 }: WalletFormDialogProps) => {
   return (
     <PopupDialog
-      {...props}
       open
+      {...props}
       title={blockchain.name || ""}
       icon={blockchain.icon}
       description="Enter the wallet details below"

@@ -42,10 +42,22 @@ export interface Parcel {
     addresses: string[];
     token: Token;
     amount: string;
-  }) => Promise<SplitResult[]>;
+  }) => Promise<TransactionResult[]>;
+
+  merge: ({
+    senders,
+    receiver,
+    token,
+    amount,
+  }: {
+    senders: Wallet[];
+    receiver: string;
+    token: Token;
+    amount?: string;
+  }) => Promise<TransactionResult[]>;
 }
 
-export interface SplitResult {
+export interface TransactionResult {
   to: string;
   txHash: string;
   status: boolean;

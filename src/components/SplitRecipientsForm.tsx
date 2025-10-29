@@ -17,7 +17,7 @@ import { FormFieldError } from "./FormFieldError";
 import { MdGroupAdd } from "react-icons/md";
 import { SplitInformation } from "./SplitInformation";
 import { SplitRecipient } from "./SplitRecipient";
-import { RecipientsContainer } from "./RecipientsContainer";
+import { AddressesContainer } from "./AddressesContainer";
 
 const schema = yup.object({
   addresses: yup
@@ -125,7 +125,7 @@ const SplitRecipientsForm = ({ setup, onSubmit }: SplitRecipientsFormProps) => {
             name="addresses"
             render={({ field, fieldState }) => (
               <>
-                <RecipientsContainer>
+                <AddressesContainer>
                   {field.value.length === 0 ? (
                     <p className="text-sm italic text-center">
                       No recipients added yet.
@@ -142,7 +142,7 @@ const SplitRecipientsForm = ({ setup, onSubmit }: SplitRecipientsFormProps) => {
                       />
                     ))
                   )}
-                </RecipientsContainer>
+                </AddressesContainer>
                 <FormFieldError message={fieldState.error?.message} />
               </>
             )}

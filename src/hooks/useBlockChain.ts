@@ -1,19 +1,33 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate, type Location } from "react-router";
 import { blockchains } from "../resources/blockchains";
 import type { Token, Wallet } from "../types";
 import { useNavigateBack } from "./useNavigateBack";
 
+interface BlockchainLocationState {
+  blockchain: string;
+  token?: Token;
+  amount?: string;
+  recipients?: string[];
+  senders?: string[];
+  wallet?: string;
+}
+
 const useBlockchain = () => {
   const navigateBack = useNavigateBack();
   const navigate = useNavigate();
-  const location = useLocation();
+  const location: Location<BlockchainLocationState> = useLocation();
 
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [receiver, setReceiver] = useState<string | null>(null);
+
   const [recipients, setRecipients] = useState<string[]>([]);
+  const [senders, setSenders] = useState<Wallet[]>([]);
+
   const token: Token | null = location.state?.token || null;
   const amount: string | null = location.state?.amount || null;
   const blockchain = blockchains[location.state?.blockchain];
+
   const CustomTokenForm = blockchain ? blockchain.CustomTokenForm : null;
   const WalletForm = blockchain ? blockchain.WalletForm : null;
   const Parcel = blockchain ? blockchain.Parcel : null;
@@ -22,7 +36,17 @@ const useBlockchain = () => {
   const isTokenSelected = Boolean(blockchain && token);
   const isAmountSet = Boolean(isTokenSelected && amount);
   const isRecipientsSet = Boolean(
-    isAmountSet && recipients.length === location.state?.addresses
+    isAmountSet &&
+      recipients.every((addr: string) =>
+        location.state?.recipients?.includes(addr)
+      )
+  );
+
+  const isSendersSet = Boolean(
+    senders.length > 0 &&
+      senders.every((sender) =>
+        location.state?.senders?.includes(sender.address)
+      )
   );
 
   /* Determine if the wallet is configured */
@@ -66,24 +90,32 @@ const useBlockchain = () => {
     });
   };
 
-  const configureRecipients = (addresses: string[]) => {
-    setRecipients(addresses);
+  const configureRecipients = (recipients: string[]) => {
+    setRecipients(recipients);
     navigate(location, {
       state: {
         ...location.state,
-        addresses: addresses.length,
+        recipients,
       },
     });
   };
 
-  const configureWallet = (wallet: Wallet) => {
-    setWallet(wallet);
+  const configureSenders = (senders: Wallet[]) => {
+    setSenders(senders);
     navigate(location, {
       state: {
         ...location.state,
-        wallet: wallet.address,
+        senders: senders.map((s) => s.address),
       },
     });
+  };
+
+  const configureReceiver = (address: string) => {
+    setReceiver(address);
+  };
+
+  const configureWallet = (wallet: Wallet) => {
+    setWallet(wallet);
   };
 
   const cancelWalletSetup = () => {
@@ -95,11 +127,14 @@ const useBlockchain = () => {
     token,
     wallet,
     amount,
+    receiver,
+    senders,
     recipients,
     blockchain,
     isAmountSet,
     isTokenSelected,
     isRecipientsSet,
+    isSendersSet,
     showCustomTokenForm,
     isWalletConfigured,
     WalletForm,
@@ -113,6 +148,8 @@ const useBlockchain = () => {
     configureWallet,
     cancelWalletSetup,
     configureRecipients,
+    configureSenders,
+    configureReceiver,
   };
 };
 

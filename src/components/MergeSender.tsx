@@ -1,26 +1,16 @@
 import { HiOutlineCheckCircle, HiOutlineXMark } from "react-icons/hi2";
 import { cn } from "../lib/utils";
-import type { TransactionResult, Token } from "../types";
+import type { TransactionResult } from "../types";
 
-interface SplitRecipientProps {
+interface MergeSenderProps {
   index: number;
   address: string;
   remove?: (index: number) => void;
-  amountPerRecipient?: string;
-  token?: Token;
   showBalance?: boolean;
   result?: TransactionResult;
 }
 
-const SplitRecipient = ({
-  index,
-  address,
-  amountPerRecipient,
-  token,
-  result,
-  remove,
-  showBalance = true,
-}: SplitRecipientProps) => {
+const MergeSender = ({ index, address, result, remove }: MergeSenderProps) => {
   /* Shorten address for display */
   const shortenAddress = (addr: string) =>
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -48,22 +38,6 @@ const SplitRecipient = ({
         <div className="font-mono text-xs text-gray-400">
           {shortenAddress(address)}
         </div>
-
-        {/* Amount per recipient */}
-        {showBalance && amountPerRecipient && (
-          <div className="flex items-center gap-1 text-xs text-green-400">
-            {token?.icon && (
-              <img
-                src={token.icon}
-                alt={token.symbol}
-                className="size-3 rounded-full"
-              />
-            )}
-            <span className="font-semibold">
-              {amountPerRecipient} {token?.symbol || "TOKENS"}
-            </span>
-          </div>
-        )}
       </div>
 
       {result ? (
@@ -95,4 +69,4 @@ const SplitRecipient = ({
   );
 };
 
-export { SplitRecipient };
+export { MergeSender };
