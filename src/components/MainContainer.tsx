@@ -1,4 +1,5 @@
 import { cn } from "../lib/utils";
+import { Container } from "./Container";
 
 const MainContainer = ({
   children,
@@ -8,15 +9,12 @@ const MainContainer = ({
   className?: string;
 }) => {
   return (
-    <main className="flex flex-col p-4 grow min-w-0 min-h-0">
-      <div
-        className={cn(
-          "w-full max-w-md mx-auto flex flex-col grow min-w-0 min-h-0",
-          className
-        )}
+    <main className="flex flex-col grow min-w-0 min-h-0">
+      <Container
+        className={cn("flex flex-col grow min-w-0 min-h-0 p-4", className)}
       >
         {children}
-      </div>
+      </Container>
     </main>
   );
 };
