@@ -77,7 +77,11 @@ const SplitRecepient = ({
         {showBalance && amountPerRecipient && (
           <div className="flex items-center gap-1 text-xs text-green-400">
             {token?.icon && (
-              <img src={token.icon} alt={token.symbol} className="size-3" />
+              <img
+                src={token.icon}
+                alt={token.symbol}
+                className="size-3 rounded-full"
+              />
             )}
             <span className="font-semibold">
               {amountPerRecipient} {token?.symbol || "TOKENS"}
@@ -122,7 +126,7 @@ const SplitInformation = ({
       <img
         src={token?.icon || AppIcon}
         alt={token?.symbol}
-        className="inline-block size-4"
+        className="inline-block size-4 rounded-full"
       />{" "}
       {amount} {token?.symbol || "CUSTOM-TOKEN"}
     </span>{" "}
