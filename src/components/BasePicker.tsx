@@ -1,4 +1,5 @@
 import { cn } from "../lib/utils";
+import { SectionHeading } from "./SectionHeading";
 
 interface BasePickerItemProps {
   id: string;
@@ -27,13 +28,7 @@ const BasePickerItem = ({ id, name, icon, onSelect }: BasePickerItemProps) => {
   );
 };
 
-const BasePickerHeading = ({ title }: { title: string }) => {
-  return (
-    <h2 className="font-bold text-center">
-      <span className="rounded-full bg-neutral-950 px-3 py-1">{title}</span>
-    </h2>
-  );
-};
+const BasePickerHeading = SectionHeading;
 
 interface BasePickerProps {
   title?: string;
