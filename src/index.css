@@ -14,3 +14,16 @@
     Consolas, "Liberation Mono", Menlo, monospace;
   --font-display: "Major Mono Display", ui-monospace, SFMono-Regular, "SF Mono";
 }
+
+@layer base {
+  /* Override scrollbar styles */
+  *,
+  ::after,
+  ::before {
+    @apply /* Applied Styles */
+    [&::-webkit-scrollbar]:w-2
+    [&::-webkit-scrollbar]:h-2
+    [&::-webkit-scrollbar-track]:bg-neutral-800
+    [&::-webkit-scrollbar-thumb]:bg-neutral-600;
+  }
+}
