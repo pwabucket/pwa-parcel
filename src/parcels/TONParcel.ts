@@ -119,6 +119,92 @@ class TONWallet {
     }
   }
 
+  async isWalletDeployed(): Promise<boolean> {
+    await this.initWallet();
+    try {
+      const state = await this.client.getContractState(this.wallet!.address);
+      console.log("Wallet state:", state);
+      return state.state === "active";
+    } catch {
+      return false;
+    }
+  }
+
+  async deployWallet(): Promise<void> {
+    await this.initWallet();
+
+    /* Check if wallet is already deployed */
+    if (await this.isWalletDeployed()) {
+      return;
+    }
+
+    /* Check if wallet has sufficient balance for deployment */
+    const balance = await this.client.getBalance(this.wallet!.address);
+
+    console.log("Balance for deployment:", fromNano(balance));
+
+    const minDeploymentBalance =
+      toNano("0.05"); /* Higher minimum balance for reliable deployment */
+
+    if (balance < minDeploymentBalance) {
+      throw new Error(
+        `Insufficient balance for wallet deployment. Required: ${fromNano(
+          minDeploymentBalance
+        )} TON, Available: ${fromNano(balance)} TON`
+      );
+    }
+
+    /* Create a simple transfer to self to deploy the wallet */
+    const seqno = await this.wallet!.contract.getSeqno();
+
+    let transfer;
+    if (this.isWalletV4(this.wallet!.contract)) {
+      transfer = await this.wallet!.contract.createTransfer({
+        seqno,
+        secretKey: this.wallet!.keyPair.secretKey,
+        sendMode:
+          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS for better error detection */,
+        messages: [
+          internal({
+            to: this.wallet!.address,
+            value: toNano("0.01") /* Deployment amount */,
+            bounce: false /* Important: set bounce to false for deployment */,
+          }),
+        ],
+      });
+    } else if (this.isWalletV5(this.wallet!.contract)) {
+      transfer = this.wallet!.contract.createTransfer({
+        seqno,
+        secretKey: this.wallet!.keyPair.secretKey,
+        sendMode:
+          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS for better error detection */,
+        messages: [
+          internal({
+            to: this.wallet!.address,
+            value: toNano("0.01") /* Deployment amount */,
+            bounce: false /* Important: set bounce to false for deployment */,
+          }),
+        ],
+      });
+    } else {
+      throw new Error("Unsupported wallet version");
+    }
+
+    /* Send the deployment transaction */
+    await this.client.sendExternalMessage(this.wallet!.contract, transfer);
+
+    /* Wait for deployment confirmation */
+    const maxRetries = 30;
+    for (let i = 0; i < maxRetries; i++) {
+      if (await this.isWalletDeployed()) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    throw new Error("Wallet deployment timeout");
+  }
+
   private async waitForTransaction(
     expectedSeqno: number,
     timeout = 60000
@@ -134,23 +220,30 @@ class TONWallet {
           /* Transaction confirmed, now get transaction history to find the hash */
           const transactions = await this.client.getTransactions(
             this.wallet!.address,
-            { limit: 5 }
+            { limit: 10 } /* Increased limit to find our transaction */
           );
 
-          /* Find the transaction with the expected seqno */
-          for (const tx of transactions) {
-            if (
-              tx.inMessage?.info.src === null &&
-              tx.description.type === "generic"
-            ) {
-              /* This is likely our outgoing transaction */
-              return tx.hash().toString("hex");
-            }
-          }
-
-          /* If we can't find the specific transaction, return the latest transaction hash */
+          /* Find the most recent transaction */
           if (transactions.length > 0) {
-            return transactions[0].hash().toString("hex");
+            /* Get the latest transaction */
+            const latestTx = transactions[0];
+            const txHash = latestTx.hash().toString("hex");
+
+            /* Check if transaction was successful */
+            if (
+              latestTx.description.type === "generic" &&
+              latestTx.description.computePhase.type === "vm" &&
+              latestTx.description.computePhase.success
+            ) {
+              console.log("Transaction successful:", txHash);
+              return txHash;
+            } else {
+              console.error(
+                "Transaction failed on-chain:",
+                latestTx.description
+              );
+              throw new Error(`Transaction failed on-chain. Hash: ${txHash}`);
+            }
           }
         }
 
@@ -158,6 +251,13 @@ class TONWallet {
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
         console.warn("Error checking transaction status:", error);
+        /* If this is a transaction failure error, re-throw it */
+        if (
+          error instanceof Error &&
+          error.message.includes("Transaction failed")
+        ) {
+          throw error;
+        }
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
@@ -175,9 +275,35 @@ class TONWallet {
   async transferNativeTon(recipientAddress: string, amountTon: string) {
     await this.initWallet();
 
+    /* Automatically deploy wallet if not already deployed */
+    await this.deployWallet();
+
+    console.log("Transferring", amountTon, "TON to", recipientAddress);
+
     const recipient = Address.parse(recipientAddress);
     const amountNano = toNano(amountTon);
+
+    /* Check if wallet has sufficient balance for transfer + gas */
+    const currentBalance = await this.client.getBalance(this.wallet!.address);
+    const gasEstimate = toNano("0.01"); /* Estimate gas fees */
+    const totalRequired = amountNano + gasEstimate;
+
+    console.log("Balance for transfer:", fromNano(currentBalance));
+
+    if (currentBalance < totalRequired) {
+      throw new Error(
+        `Insufficient balance. Required: ${fromNano(
+          totalRequired
+        )} TON (${amountTon} + gas), Available: ${fromNano(currentBalance)} TON`
+      );
+    }
+
     const seqno = await this.wallet!.contract.getSeqno();
+
+    console.log("Amount (nano):", amountNano.toString());
+    console.log("Amount (TON):", fromNano(amountNano));
+    console.log("Current balance:", fromNano(currentBalance));
+    console.log("Seqno:", seqno);
 
     let transfer;
 
@@ -185,18 +311,28 @@ class TONWallet {
       transfer = await this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
-        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        sendMode:
+          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS to catch failures */,
         messages: [
-          internal({ to: recipient, value: amountNano, bounce: true }),
+          internal({
+            to: recipient,
+            value: amountNano,
+            bounce: false,
+          }) /* Set bounce to false for regular transfers */,
         ],
       });
     } else if (this.isWalletV5(this.wallet!.contract)) {
       transfer = this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
-        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        sendMode:
+          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS to catch failures */,
         messages: [
-          internal({ to: recipient, value: amountNano, bounce: true }),
+          internal({
+            to: recipient,
+            value: amountNano,
+            bounce: false,
+          }) /* Set bounce to false for regular transfers */,
         ],
       });
     } else {
@@ -242,6 +378,9 @@ class TONWallet {
   ) {
     await this.initWallet();
 
+    /* Automatically deploy wallet if not already deployed */
+    await this.deployWallet();
+
     const master = this.client.open(
       JettonMaster.create(Address.parse(jettonMasterAddress))
     );
@@ -254,15 +393,40 @@ class TONWallet {
       JettonWallet.create(jettonWalletAddress)
     );
 
+    /* Check if wallet has jetton balance */
+    const jettonBalance = await jettonWallet.getBalance();
+    const requiredAmount = toNano(jettonAmount);
+
+    if (jettonBalance < requiredAmount) {
+      throw new Error(
+        `Insufficient jetton balance. Required: ${jettonAmount}, Available: ${fromNano(
+          jettonBalance
+        )}`
+      );
+    }
+
+    /* Check if wallet has sufficient TON for gas fees */
+    const currentBalance = await this.client.getBalance(this.wallet!.address);
+    const gasEstimate =
+      toNano("0.1"); /* Higher gas estimate for jetton transfers */
+
+    if (currentBalance < gasEstimate) {
+      throw new Error(
+        `Insufficient TON balance for gas fees. Required: ${fromNano(
+          gasEstimate
+        )} TON, Available: ${fromNano(currentBalance)} TON`
+      );
+    }
+
     const body = beginCell()
       .storeUint(0xf8a7ea5, 32) /* transfer op */
-      .storeUint(0, 64)
-      .storeCoins(toNano(jettonAmount))
-      .storeAddress(Address.parse(recipientAddress))
-      .storeAddress(this.wallet!.contract.address)
-      .storeBit(false) /* no custom payload */
-      .storeCoins(toNano("0.01")) /* forward amount */
-      .storeBit(false)
+      .storeUint(0, 64) /* query_id */
+      .storeCoins(requiredAmount) /* amount */
+      .storeAddress(Address.parse(recipientAddress)) /* destination */
+      .storeAddress(this.wallet!.contract.address) /* response_destination */
+      .storeBit(false) /* no custom_payload */
+      .storeCoins(toNano("0.02")) /* forward_amount */
+      .storeBit(false) /* no forward_payload */
       .endCell();
 
     const seqno = await this.wallet!.contract.getSeqno();
@@ -273,12 +437,14 @@ class TONWallet {
       transfer = await this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
-        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        sendMode:
+          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS to catch failures */,
         messages: [
           internal({
             to: jettonWallet.address,
-            value: toNano("0.05"),
-            bounce: true,
+            value:
+              toNano("0.08") /* Increased gas amount for jetton transfers */,
+            bounce: false /* Set bounce to false */,
             body,
           }),
         ],
@@ -287,12 +453,14 @@ class TONWallet {
       transfer = this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
-        sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+        sendMode:
+          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS to catch failures */,
         messages: [
           internal({
             to: jettonWallet.address,
-            value: toNano("0.05"),
-            bounce: true,
+            value:
+              toNano("0.08") /* Increased gas amount for jetton transfers */,
+            bounce: false /* Set bounce to false */,
             body,
           }),
         ],
