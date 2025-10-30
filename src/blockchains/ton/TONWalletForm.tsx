@@ -28,7 +28,7 @@ async function getWalletAddressFromPhrase(mnemonic: string, version: number) {
           });
     return contract.address.toString({
       bounceable: false,
-      testOnly: false,
+      testOnly: import.meta.env.DEV,
     });
   } catch (e) {
     console.error("Error getting wallet address:", e);
