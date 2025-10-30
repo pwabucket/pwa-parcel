@@ -42,7 +42,7 @@ const ActionCard = ({
     <Link
       to={to}
       className={cn(
-        "group relative border overflow-hidden rounded-lg p-6 transition-all duration-300 hover:scale-105",
+        "group relative border overflow-hidden rounded-3xl p-6 transition-all duration-300",
         styles.border,
         styles.background,
         className
