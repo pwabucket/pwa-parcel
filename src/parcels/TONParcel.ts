@@ -57,6 +57,9 @@ class TONWallet {
       /* Create new client */
       this.client = new TonClient({
         endpoint: mainnet ? TON_MAINNET_RPC : TON_TESTNET_RPC,
+        apiKey: mainnet
+          ? import.meta.env.VITE_TON_MAINNET_API_KEY
+          : import.meta.env.VITE_TON_TESTNET_API_KEY,
       });
     }
   }
@@ -322,6 +325,9 @@ class TONParcel implements Parcel {
     this.mainnet = mainnet;
     this.sharedClient = new TonClient({
       endpoint: mainnet ? TON_MAINNET_RPC : TON_TESTNET_RPC,
+      apiKey: mainnet
+        ? import.meta.env.VITE_TON_MAINNET_API_KEY
+        : import.meta.env.VITE_TON_TESTNET_API_KEY,
     });
   }
 

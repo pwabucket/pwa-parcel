@@ -45,6 +45,9 @@ jobs:
 
       - name: Build
         run: pnpm run build --base="${{ steps.pages_url.outputs.homepage_url }}"
+        env:
+          VITE_TON_MAINNET_API_KEY: ${{ secrets.VITE_TON_MAINNET_API_KEY }}
+          VITE_TON_TESTNET_API_KEY: ${{ secrets.VITE_TON_TESTNET_API_KEY }}
 
       - name: Setup 404 page
         run: cp dist/index.html dist/404.html
