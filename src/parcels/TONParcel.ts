@@ -579,17 +579,19 @@ class TONParcel implements Parcel {
     token: Token;
     amount?: string;
   }): Promise<TransactionResult[]> {
-    /* Create transfer promises for parallel execution */
-    const transferPromises = senders.map(async (wallet) => {
+    const results = [] as TransactionResult[];
+
+    for (const wallet of senders) {
       /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
       const seedPhrase = wallet.mnemonic || wallet.privateKey;
       if (!seedPhrase) {
-        return {
+        results.push({
           status: false,
           to: receiver,
           txHash: "",
           error: "Wallet must have mnemonic or privateKey for TON operations",
-        };
+        });
+        continue;
       }
 
       const tonWallet = this.createWallet(
@@ -599,13 +601,32 @@ class TONParcel implements Parcel {
 
       try {
         let result;
-        const transferAmount =
-          amount || "0.1"; /* Default amount if not specified */
 
         if (!token.address || token.address === "native") {
+          let transferAmount = amount;
+
+          if (!transferAmount) {
+            /* If amount not specified, transfer entire balance minus gas */
+            const balance = await tonWallet.getNativeTonBalance();
+            const balanceNano = toNano(balance);
+            const gasEstimate = toNano("0.01");
+            if (balanceNano <= gasEstimate) {
+              throw new Error("Insufficient balance to cover gas fees");
+            }
+            transferAmount = fromNano(balanceNano - gasEstimate);
+          }
+
           /* Native TON transfer */
           result = await tonWallet.transferNativeTon(receiver, transferAmount);
         } else {
+          let transferAmount = amount;
+
+          if (!transferAmount) {
+            /* If amount not specified, transfer entire jetton balance */
+            const balance = await tonWallet.getJettonBalance(token.address);
+            transferAmount = balance;
+          }
+
           /* Jetton transfer */
           result = await tonWallet.transferJetton(
             token.address,
@@ -614,23 +635,21 @@ class TONParcel implements Parcel {
           );
         }
 
-        return {
+        results.push({
           status: true,
           to: result.to,
           txHash: result.txHash,
-        };
+        });
       } catch (error) {
-        return {
+        results.push({
           status: false,
           to: receiver,
           txHash: "",
           error: error instanceof Error ? error.message : "Unknown error",
-        };
+        });
       }
-    });
+    }
 
-    /* Execute all transfers in parallel */
-    const results = await Promise.all(transferPromises);
     return results;
   }
 
