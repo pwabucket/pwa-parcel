@@ -1,0 +1,3 @@
+const TONWalletForm = () => {};
+
+export { TONWalletForm };

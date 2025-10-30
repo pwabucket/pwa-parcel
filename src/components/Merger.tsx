@@ -25,7 +25,7 @@ const Merger = ({ setup }: MergerProps) => {
       if (!Parcel) {
         throw new Error("Parcel is not defined");
       }
-      const parcelInstance = new Parcel();
+      const parcelInstance = new Parcel({ mainnet: import.meta.env.PROD });
       return parcelInstance.merge({
         senders,
         receiver: receiver!,

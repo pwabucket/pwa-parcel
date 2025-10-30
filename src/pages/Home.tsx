@@ -25,7 +25,7 @@ const Home = () => {
             </Link>
           </Button>
 
-          <Button asChild variant={"outline"}>
+          <Button asChild variant={"secondary"}>
             <Link to="/merge">
               <AiOutlineMerge className="size-6" /> Merge
             </Link>

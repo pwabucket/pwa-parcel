@@ -41,19 +41,20 @@ export const NETWORKS = {
 } as const;
 
 /* Gas Configuration */
-const GAS_LIMIT_NATIVE = 21_000n;
-const GAS_LIMIT_TOKEN = 60_000n;
-const BASE_GAS_PRICE = ethers.parseUnits("0.13", "gwei"); /* 0.13 gwei */
+const FALLBACK_GAS_LIMIT_NATIVE = 21_000n; /* Standard ETH transfer gas limit */
+const FALLBACK_GAS_LIMIT_TOKEN =
+  60_000n; /* Conservative token transfer estimate */
+const FALLBACK_GAS_PRICE = ethers.parseUnits(
+  "0.13",
+  "gwei"
+); /* Fallback if network fetch fails */
 
 /* Standard ERC-20 Token ABI (minimal for transfers) */
 const ERC20_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
-  "function balanceOf(address account) view returns (uint256)",
+  "function balanceOf(address owner) view returns (uint256)",
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
-  "function name() view returns (string)",
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)",
 ];
 
 export interface TransferResult {
@@ -125,15 +126,16 @@ export class EVMWallet {
   private mainnet: boolean;
   private chainId: bigint | null = null;
   private rpcUrl: string;
-  private currentNonce: number | null = null; // Track nonce for split operations
+  private currentNonce: number | null =
+    null; /* Track nonce for split operations */
 
   constructor({
     privateKey,
     network,
     mainnet = false,
     rpcUrl,
-    provider, // Optional shared provider
-    chainId, // Optional pre-determined chainId
+    provider /* Optional shared provider */,
+    chainId /* Optional pre-determined chainId */,
   }: {
     privateKey: string;
     network?: NetworkName;
@@ -276,11 +278,22 @@ export class EVMWallet {
         "pending"
       );
 
+      /* Use provided gas price or fetch from network */
+      const finalGasPrice = gasPrice || (await this.getOptimizedGasPrice());
+
+      /* Estimate gas limit for this specific transaction */
+      const gasLimit = await this.estimateGasWithBuffer(
+        "native",
+        undefined,
+        recipientAddress,
+        amount
+      );
+
       const tx = {
         to: recipientAddress,
         value,
-        gasLimit: GAS_LIMIT_NATIVE,
-        gasPrice: gasPrice || BASE_GAS_PRICE,
+        gasLimit,
+        gasPrice: finalGasPrice,
         chainId: this.chainId!,
         nonce,
       };
@@ -332,14 +345,25 @@ export class EVMWallet {
         "pending"
       );
 
+      /* Use provided gas price or fetch from network */
+      const finalGasPrice = gasPrice || (await this.getOptimizedGasPrice());
+
+      /* Estimate gas limit for this specific token transfer */
+      const gasLimit = await this.estimateGasWithBuffer(
+        "token",
+        tokenAddress,
+        recipientAddress,
+        amount
+      );
+
       const tx = await contract.transfer.populateTransaction(
         recipientAddress,
         value
       );
       const fullTx = {
         ...tx,
-        gasLimit: GAS_LIMIT_TOKEN,
-        gasPrice: gasPrice || BASE_GAS_PRICE,
+        gasLimit,
+        gasPrice: finalGasPrice,
         chainId: this.chainId!,
         nonce,
       };
@@ -376,14 +400,27 @@ export class EVMWallet {
     amount?: string
   ): Promise<bigint> {
     try {
+      await this.initializeNetwork();
+
       if (type === "native") {
-        return BigInt(GAS_LIMIT_NATIVE);
+        if (recipientAddress && amount) {
+          /* Estimate actual gas for specific native transfer */
+          const value = ethers.parseEther(amount);
+          const estimatedGas = await this.provider.estimateGas({
+            to: recipientAddress,
+            value,
+            from: this.wallet.address,
+          });
+          return estimatedGas;
+        }
+        return FALLBACK_GAS_LIMIT_NATIVE;
       } else if (
         type === "token" &&
         tokenAddress &&
         recipientAddress &&
         amount
       ) {
+        /* Estimate gas for token transfer */
         const contract = new ethers.Contract(
           tokenAddress,
           ERC20_ABI,
@@ -399,11 +436,31 @@ export class EVMWallet {
         return estimatedGas;
       }
 
-      return BigInt(GAS_LIMIT_TOKEN);
+      return FALLBACK_GAS_LIMIT_TOKEN;
     } catch (error) {
-      console.warn("Gas estimation failed, using default:", error);
-      return BigInt(type === "native" ? GAS_LIMIT_NATIVE : GAS_LIMIT_TOKEN);
+      console.warn("Gas estimation failed, using fallback:", error);
+      return type === "native"
+        ? FALLBACK_GAS_LIMIT_NATIVE
+        : FALLBACK_GAS_LIMIT_TOKEN;
     }
+  }
+
+  /* Estimate gas with safety buffer */
+  async estimateGasWithBuffer(
+    type: "native" | "token",
+    tokenAddress?: string,
+    recipientAddress?: string,
+    amount?: string,
+    bufferPercent: number = 20
+  ): Promise<bigint> {
+    const baseGas = await this.estimateGas(
+      type,
+      tokenAddress,
+      recipientAddress,
+      amount
+    );
+    const buffer = (baseGas * BigInt(bufferPercent)) / 100n;
+    return baseGas + buffer;
   }
 
   async getNetworkInfo() {
@@ -418,6 +475,32 @@ export class EVMWallet {
       rpc: this.rpcUrl,
       chainId: this.chainId,
     };
+  }
+
+  /* Get current gas price from network */
+  async getGasPrice(): Promise<bigint> {
+    try {
+      const feeData = await this.provider.getFeeData();
+
+      /* Use EIP-1559 if available (maxFeePerGas), otherwise use legacy gasPrice */
+      if (feeData.maxFeePerGas) {
+        return feeData.maxFeePerGas;
+      } else if (feeData.gasPrice) {
+        return feeData.gasPrice;
+      } else {
+        console.warn("Could not fetch gas price from network, using fallback");
+        return FALLBACK_GAS_PRICE;
+      }
+    } catch (error) {
+      console.warn("Error fetching gas price:", error);
+      return FALLBACK_GAS_PRICE;
+    }
+  }
+
+  /* Get optimized gas price (slightly higher than current network price for faster confirmation) */
+  async getOptimizedGasPrice(multiplier: number = 1.1): Promise<bigint> {
+    const currentGasPrice = await this.getGasPrice();
+    return BigInt(Math.floor(Number(currentGasPrice) * multiplier));
   }
 
   /* Initialize nonce for split operations - call once before multiple transfers */
@@ -448,11 +531,22 @@ export class EVMWallet {
       const value = ethers.parseEther(amount);
       const nonce = this.getNextNonce();
 
+      /* Use provided gas price or fetch from network */
+      const finalGasPrice = gasPrice || (await this.getOptimizedGasPrice());
+
+      /* Estimate gas limit for this specific transaction */
+      const gasLimit = await this.estimateGasWithBuffer(
+        "native",
+        undefined,
+        recipientAddress,
+        amount
+      );
+
       const tx = {
         to: recipientAddress,
         value,
-        gasLimit: GAS_LIMIT_NATIVE,
-        gasPrice: gasPrice || BASE_GAS_PRICE,
+        gasLimit,
+        gasPrice: finalGasPrice,
         chainId: this.chainId!,
         nonce,
       };
@@ -501,14 +595,25 @@ export class EVMWallet {
       const value = ethers.parseUnits(amount, decimals);
       const nonce = this.getNextNonce();
 
+      /* Use provided gas price or fetch from network */
+      const finalGasPrice = gasPrice || (await this.getOptimizedGasPrice());
+
+      /* Estimate gas limit for this specific token transfer */
+      const gasLimit = await this.estimateGasWithBuffer(
+        "token",
+        tokenAddress,
+        recipientAddress,
+        amount
+      );
+
       const tx = await contract.transfer.populateTransaction(
         recipientAddress,
         value
       );
       const fullTx = {
         ...tx,
-        gasLimit: GAS_LIMIT_TOKEN,
-        gasPrice: gasPrice || BASE_GAS_PRICE,
+        gasLimit,
+        gasPrice: finalGasPrice,
         chainId: this.chainId!,
         nonce,
       };
@@ -549,7 +654,7 @@ export class EVMParcel implements Parcel {
 
   constructor({
     network,
-    mainnet = import.meta.env.PROD,
+    mainnet = false,
     rpcUrl,
   }: {
     network?: NetworkName;
@@ -701,8 +806,14 @@ export class EVMParcel implements Parcel {
             const balanceWei = ethers.parseEther(balance);
 
             /* Estimate gas cost for the transaction */
-            const gasPrice = options?.gasPrice || BASE_GAS_PRICE;
-            const gasLimit = BigInt(GAS_LIMIT_NATIVE);
+            const gasPrice =
+              options?.gasPrice || (await wallet.getOptimizedGasPrice());
+            const gasLimit = await wallet.estimateGasWithBuffer(
+              "native",
+              undefined,
+              receiver,
+              "0.1" /* Use a small amount for estimation */
+            );
             const gasCost = gasPrice * gasLimit;
 
             /* Calculate available amount after gas */
@@ -774,6 +885,63 @@ export class EVMParcel implements Parcel {
           ? NETWORKS[this.network][this.mainnet ? "mainnet" : "testnet"]
           : "unknown"),
       chainId: this.chainId,
+    };
+  }
+
+  /* Get current network gas prices */
+  async getNetworkGasPrices(): Promise<{
+    gasPrice: bigint;
+    maxFeePerGas?: bigint;
+    maxPriorityFeePerGas?: bigint;
+  }> {
+    await this.initializeNetwork();
+
+    try {
+      const feeData = await this.sharedProvider.getFeeData();
+
+      return {
+        gasPrice: feeData.gasPrice || FALLBACK_GAS_PRICE,
+        maxFeePerGas: feeData.maxFeePerGas || undefined,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || undefined,
+      };
+    } catch (error) {
+      console.warn("Error fetching network gas prices:", error);
+      return {
+        gasPrice: FALLBACK_GAS_PRICE,
+      };
+    }
+  }
+
+  /* Estimate gas for a specific transaction */
+  async estimateTransactionGas(
+    wallet: Wallet,
+    type: "native" | "token",
+    recipientAddress: string,
+    amount: string,
+    tokenAddress?: string
+  ): Promise<{
+    gasLimit: bigint;
+    gasPrice: bigint;
+    estimatedCost: bigint;
+  }> {
+    await this.initializeNetwork();
+
+    const walletInstance = this.createWallet(wallet.privateKey!);
+
+    const gasLimit = await walletInstance.estimateGasWithBuffer(
+      type,
+      tokenAddress,
+      recipientAddress,
+      amount
+    );
+
+    const gasPrice = await walletInstance.getOptimizedGasPrice();
+    const estimatedCost = gasLimit * gasPrice;
+
+    return {
+      gasLimit,
+      gasPrice,
+      estimatedCost,
     };
   }
 }

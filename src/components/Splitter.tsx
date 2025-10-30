@@ -32,12 +32,20 @@ const Splitter = ({ setup }: SplitterProps) => {
       : "0";
 
   const mutation = useMutation({
-    mutationKey: ["split", blockchain.id, token?.address],
+    mutationKey: [
+      "split",
+      blockchain.id,
+      wallet?.address,
+      token?.address,
+      amount,
+    ],
     mutationFn: async () => {
       if (!Parcel) {
         throw new Error("Parcel is not defined");
       }
-      const parcelInstance = new Parcel();
+      const parcelInstance = new Parcel({
+        mainnet: import.meta.env.PROD,
+      });
       return parcelInstance.split({
         wallet: setup.wallet!,
         addresses: recipients,
