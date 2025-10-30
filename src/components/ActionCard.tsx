@@ -15,14 +15,12 @@ const variantStyles = {
   purple: {
     border: "border-purple-500/20 hover:border-purple-400/40",
     background: "bg-linear-to-br from-purple-900/20 to-purple-800/10",
-    iconBg: "bg-purple-500/20 group-hover:bg-purple-500/30",
     title: "text-purple-200 group-hover:text-purple-100",
     description: "text-purple-300/70",
   },
   green: {
     border: "border-green-500/20 hover:border-green-400/40",
     background: "bg-linear-to-br from-green-900/20 to-green-800/10",
-    iconBg: "bg-green-500/20 group-hover:bg-green-500/30",
     title: "text-green-200 group-hover:text-green-100",
     description: "text-green-300/70",
   },
@@ -42,21 +40,14 @@ const ActionCard = ({
     <Link
       to={to}
       className={cn(
-        "group relative border overflow-hidden rounded-3xl p-6 transition-all duration-300",
+        "group relative border overflow-hidden p-6 transition-all duration-300",
         styles.border,
         styles.background,
         className
       )}
     >
       <div className="flex flex-row md:flex-col items-center gap-3 text-left md:text-center">
-        <div
-          className={cn(
-            "p-3 rounded-full transition-colors shrink-0",
-            styles.iconBg
-          )}
-        >
-          {icon}
-        </div>
+        <div className={cn("p-3 transition-colors shrink-0")}>{icon}</div>
         <div>
           <h3 className={cn("font-bold transition-colors", styles.title)}>
             {title}
