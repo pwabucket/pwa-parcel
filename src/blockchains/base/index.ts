@@ -1,4 +1,4 @@
-import { EVMParcel } from "../../parcels/EVMParcel";
+import { EVMParcel, type EVMParcelOptions } from "../../parcels/EVMParcel";
 import type { Token } from "../../types";
 
 export const id = "base";
@@ -19,8 +19,9 @@ export const tokens: Token[] = [
 ];
 
 export class Parcel extends EVMParcel {
-  constructor() {
+  constructor(options: EVMParcelOptions = {}) {
     super({
+      ...options,
       network: "base",
     });
   }

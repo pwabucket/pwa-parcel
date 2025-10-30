@@ -4,7 +4,7 @@ import type { Parcel, Token, Wallet } from "../types";
 /* EVM Networks Configuration */
 export const NETWORKS = {
   bsc: {
-    mainnet: "https://bsc-dataseed1.binance.org/",
+    mainnet: "https://bsc-dataseed.binance.org/",
     testnet: "https://data-seed-prebsc-1-s1.binance.org:8545/",
     nativeCurrency: "BNB",
   },
@@ -650,6 +650,12 @@ export class EVMWallet {
   }
 }
 
+export interface EVMParcelOptions {
+  network?: NetworkName;
+  mainnet?: boolean;
+  rpcUrl?: string;
+}
+
 /* EVMParcel class - orchestrates multiple operations using EVMWallet */
 export class EVMParcel implements Parcel {
   private network: NetworkName | null;
@@ -658,15 +664,7 @@ export class EVMParcel implements Parcel {
   private sharedProvider: ethers.JsonRpcProvider;
   private chainId: bigint | null = null;
 
-  constructor({
-    network,
-    mainnet = false,
-    rpcUrl,
-  }: {
-    network?: NetworkName;
-    mainnet?: boolean;
-    rpcUrl?: string;
-  }) {
+  constructor({ network, mainnet = false, rpcUrl }: EVMParcelOptions = {}) {
     if (rpcUrl) {
       /* Direct RPC URL provided */
       this.rpcUrl = rpcUrl;
