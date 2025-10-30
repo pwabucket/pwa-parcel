@@ -1,10 +1,10 @@
 import { InnerPageLayout } from "../layouts/InnerPageLayout";
-import AppIcon from "../assets/icon.svg";
 import { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainSetup } from "../components/BlockchainSetup";
 import type { Wallet } from "../types";
 import { MergeSendersForm } from "../components/MergeSendersForm";
 import { Merger } from "../components/Merger";
+import { AiOutlineMerge } from "react-icons/ai";
 
 const Merge = () => {
   const setup = useBlockchain();
@@ -14,7 +14,8 @@ const Merge = () => {
     <InnerPageLayout
       title={
         <>
-          <img src={AppIcon} alt="App Icon" className="size-6" /> Merge
+          <AiOutlineMerge className="size-6 text-green-300" />{" "}
+          <span className="text-green-300">Merge Tokens</span>
         </>
       }
       className="flex flex-col gap-2"

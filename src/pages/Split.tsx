@@ -1,10 +1,10 @@
 import { InnerPageLayout } from "../layouts/InnerPageLayout";
-import AppIcon from "../assets/icon.svg";
 import { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainSetup } from "../components/BlockchainSetup";
 import { SplitAmountForm } from "../components/SplitAmountForm";
 import { SplitRecipientsForm } from "../components/SplitRecipientsForm";
 import { Splitter } from "../components/Splitter";
+import { AiOutlineSplitCells } from "react-icons/ai";
 
 const Split = () => {
   const setup = useBlockchain();
@@ -20,7 +20,8 @@ const Split = () => {
     <InnerPageLayout
       title={
         <>
-          <img src={AppIcon} alt="App Icon" className="size-6" /> Split
+          <AiOutlineSplitCells className="size-6 text-purple-300" />{" "}
+          <span className="text-purple-300">Split Tokens</span>
         </>
       }
       className="flex flex-col gap-2"

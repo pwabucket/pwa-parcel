@@ -1,12 +1,11 @@
 import AppIcon from "../assets/icon.svg";
 import { Container } from "../components/Container";
-import { Button } from "../components/Button";
+import { ActionCard } from "../components/ActionCard";
 import { AiOutlineMerge, AiOutlineSplitCells } from "react-icons/ai";
-import { Link } from "react-router";
 
 const Home = () => {
   return (
-    <div className="flex flex-col min-h-dvh w-full items-center justify-center ">
+    <div className="flex flex-col min-h-dvh w-full items-center justify-center py-10">
       <Container className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 justify-center items-center">
           <img src={AppIcon} alt="App Icon" className="size-28 mx-auto" />
@@ -18,18 +17,22 @@ const Home = () => {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Button asChild>
-            <Link to="/split">
-              <AiOutlineSplitCells className="size-6" /> Split
-            </Link>
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+          <ActionCard
+            to="/split"
+            icon={<AiOutlineSplitCells className="size-8 text-purple-300" />}
+            title="Split Tokens"
+            description="Distribute tokens to multiple addresses"
+            variant="purple"
+          />
 
-          <Button asChild variant={"secondary"}>
-            <Link to="/merge">
-              <AiOutlineMerge className="size-6" /> Merge
-            </Link>
-          </Button>
+          <ActionCard
+            to="/merge"
+            icon={<AiOutlineMerge className="size-8 text-green-300" />}
+            title="Merge Tokens"
+            description="Combine tokens from multiple sources"
+            variant="green"
+          />
         </div>
       </Container>
     </div>
