@@ -8,6 +8,12 @@ export const NETWORKS = {
     testnet: "https://data-seed-prebsc-1-s1.binance.org:8545/",
     nativeCurrency: "BNB",
   },
+  base: {
+    mainnet: "https://base-mainnet.infura.io/v3/YOUR-PROJECT-ID",
+    testnet: "https://base-testnet.infura.io/v3/YOUR-PROJECT-ID",
+    nativeCurrency: "ETH",
+  },
+
   ethereum: {
     mainnet: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
     testnet: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID",
