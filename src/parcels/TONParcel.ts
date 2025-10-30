@@ -15,6 +15,37 @@ import {
 import { mnemonicNew, mnemonicToWalletKey, type KeyPair } from "@ton/crypto";
 import type { Parcel, Wallet, Token, TransactionResult } from "../types";
 
+/* Simple HTTP client for TON API */
+class TonApiClient {
+  private baseUrl: string;
+
+  constructor(mainnet = false) {
+    this.baseUrl = mainnet
+      ? "https://tonapi.io/v2"
+      : "https://testnet.tonapi.io/v2";
+  }
+
+  async getJettonInfo(jettonAddress: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/jettons/${jettonAddress}`);
+      if (!response.ok) throw new Error("API request failed");
+
+      const data = await response.json();
+      return {
+        decimals: data.metadata?.decimals
+          ? parseInt(data.metadata.decimals)
+          : 9,
+        name: data.metadata?.name,
+        symbol: data.metadata?.symbol,
+        image: data.metadata?.image,
+      };
+    } catch (error) {
+      console.warn("Failed to fetch jetton info from API:", error);
+      return { decimals: 9 };
+    }
+  }
+}
+
 const TON_MAINNET_RPC = "https://toncenter.com/api/v2/jsonRPC";
 const TON_TESTNET_RPC = "https://testnet.toncenter.com/api/v2/jsonRPC";
 
@@ -28,6 +59,7 @@ class TONWallet {
   private seedPhrase: string;
   private version: 4 | 5;
   private client: TonClient;
+  private apiClient: TonApiClient;
   private wallet: {
     keyPair: KeyPair;
     contract:
@@ -49,6 +81,7 @@ class TONWallet {
   }) {
     this.seedPhrase = seedPhrase;
     this.version = version;
+    this.apiClient = new TonApiClient(mainnet);
 
     if (client) {
       /* Use shared client */
@@ -364,8 +397,19 @@ class TONWallet {
         this.wallet!.contract.address
       );
       const jettonWallet = this.client.open(JettonWallet.create(walletAddress));
-      const bal = await jettonWallet.getBalance();
-      return fromNano(bal);
+      const balance = await jettonWallet.getBalance();
+
+      /* Get decimals from TON API */
+      const jettonInfo = await this.apiClient.getJettonInfo(
+        jettonMasterAddress
+      );
+      const decimals = jettonInfo.decimals;
+
+      /* Convert balance using correct decimals */
+      const divisor = BigInt(10 ** decimals);
+      const balanceNumber = Number(balance) / Number(divisor);
+
+      return balanceNumber.toString();
     } catch {
       return "0";
     }
@@ -393,22 +437,32 @@ class TONWallet {
       JettonWallet.create(jettonWalletAddress)
     );
 
+    /* Get decimals from TON API */
+    const jettonInfo = await this.apiClient.getJettonInfo(jettonMasterAddress);
+    const decimals = jettonInfo.decimals;
+
+    /* Convert amount using correct decimals */
+    const multiplier = BigInt(10 ** decimals);
+    const requiredAmount = BigInt(
+      Math.floor(parseFloat(jettonAmount) * Number(multiplier))
+    );
+
     /* Check if wallet has jetton balance */
     const jettonBalance = await jettonWallet.getBalance();
-    const requiredAmount = toNano(jettonAmount);
 
     if (jettonBalance < requiredAmount) {
+      const currentBalanceFormatted = (
+        Number(jettonBalance) / Number(multiplier)
+      ).toString();
       throw new Error(
-        `Insufficient jetton balance. Required: ${jettonAmount}, Available: ${fromNano(
-          jettonBalance
-        )}`
+        `Insufficient jetton balance. Required: ${jettonAmount}, Available: ${currentBalanceFormatted}`
       );
     }
 
     /* Check if wallet has sufficient TON for gas fees */
     const currentBalance = await this.client.getBalance(this.wallet!.address);
     const gasEstimate =
-      toNano("0.1"); /* Higher gas estimate for jetton transfers */
+      toNano("0.05"); /* Higher gas estimate for jetton transfers */
 
     if (currentBalance < gasEstimate) {
       throw new Error(
@@ -579,19 +633,17 @@ class TONParcel implements Parcel {
     token: Token;
     amount?: string;
   }): Promise<TransactionResult[]> {
-    const results = [] as TransactionResult[];
-
-    for (const wallet of senders) {
+    /* Create transfer promises for parallel execution */
+    const transferPromises = senders.map(async (wallet) => {
       /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
       const seedPhrase = wallet.mnemonic || wallet.privateKey;
       if (!seedPhrase) {
-        results.push({
+        return {
           status: false,
           to: receiver,
           txHash: "",
           error: "Wallet must have mnemonic or privateKey for TON operations",
-        });
-        continue;
+        };
       }
 
       const tonWallet = this.createWallet(
@@ -635,21 +687,23 @@ class TONParcel implements Parcel {
           );
         }
 
-        results.push({
+        return {
           status: true,
           to: result.to,
           txHash: result.txHash,
-        });
+        };
       } catch (error) {
-        results.push({
+        return {
           status: false,
           to: receiver,
           txHash: "",
           error: error instanceof Error ? error.message : "Unknown error",
-        });
+        };
       }
-    }
+    });
 
+    /* Execute all transfers in parallel */
+    const results = await Promise.all(transferPromises);
     return results;
   }
 

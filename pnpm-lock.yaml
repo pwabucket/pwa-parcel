@@ -26,6 +26,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.5
         version: 5.90.5(react@19.2.0)
+      '@ton-api/client':
+        specifier: ^0.4.0
+        version: 0.4.0(@ton/core@0.62.0(@ton/crypto@3.3.0))
       '@ton/core':
         specifier: ^0.62.0
         version: 0.62.0(@ton/crypto@3.3.0)
@@ -1462,6 +1465,11 @@ packages:
     peerDependencies:
       react: ^18 || ^19
 
+  '@ton-api/client@0.4.0':
+    resolution: {integrity: sha512-k3d6RzNWRDEZpVa9Gig2kHqp74tGvaK/imkjb08RIGxn+wKC7Yv5g98GnXEHf3srRkjtRCG0Nnjx8EsasOMJkw==}
+    peerDependencies:
+      '@ton/core': '>=0.59.0'
+
   '@ton/core@0.62.0':
     resolution: {integrity: sha512-GCYlzzx11rSESKkiHvNy9tL8zWth+ZtUbvV29WH478FvBp8xTw24AyoigwXWNV+OLCAcnwlGhZpTpxjD3wzCwA==}
     peerDependencies:
@@ -1688,6 +1696,9 @@ packages:
   cookie@1.0.2:
     resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
     engines: {node: '>=18'}
+
+  core-js-pure@3.46.0:
+    resolution: {integrity: sha512-NMCW30bHNofuhwLhYPt66OLOKTMbOhgTTatKVbaQC3KRHpTCiRIBYvtshr+NBYSnBxwAFhjW/RfJ0XbIjS16rw==}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -3763,6 +3774,11 @@ snapshots:
       '@tanstack/query-core': 5.90.5
       react: 19.2.0
 
+  '@ton-api/client@0.4.0(@ton/core@0.62.0(@ton/crypto@3.3.0))':
+    dependencies:
+      '@ton/core': 0.62.0(@ton/crypto@3.3.0)
+      core-js-pure: 3.46.0
+
   '@ton/core@0.62.0(@ton/crypto@3.3.0)':
     dependencies:
       '@ton/crypto': 3.3.0
@@ -4048,6 +4064,8 @@ snapshots:
   convert-source-map@2.0.0: {}
 
   cookie@1.0.2: {}
+
+  core-js-pure@3.46.0: {}
 
   cross-spawn@7.0.6:
     dependencies:
