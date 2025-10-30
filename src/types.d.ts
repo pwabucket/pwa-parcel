@@ -11,6 +11,7 @@ export interface Wallet {
   address: string;
   privateKey?: string;
   mnemonic?: string;
+  version?: number;
 }
 
 export interface CustomTokenFormProps {
