@@ -9,14 +9,22 @@ export const NETWORKS = {
     nativeCurrency: "BNB",
   },
   base: {
-    mainnet: "https://base-mainnet.infura.io/v3/YOUR-PROJECT-ID",
-    testnet: "https://base-testnet.infura.io/v3/YOUR-PROJECT-ID",
+    mainnet: `https://base-mainnet.infura.io/v3/${
+      import.meta.env.VITE_INFURA_API_KEY
+    }`,
+    testnet: `https://base-testnet.infura.io/v3/${
+      import.meta.env.VITE_INFURA_API_KEY
+    }`,
     nativeCurrency: "ETH",
   },
 
   ethereum: {
-    mainnet: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
-    testnet: "https://sepolia.infura.io/v3/YOUR-PROJECT-ID",
+    mainnet: `https://mainnet.infura.io/v3/${
+      import.meta.env.VITE_INFURA_API_KEY
+    }`,
+    testnet: `https://sepolia.infura.io/v3/${
+      import.meta.env.VITE_INFURA_API_KEY
+    }`,
     nativeCurrency: "ETH",
   },
   polygon: {
