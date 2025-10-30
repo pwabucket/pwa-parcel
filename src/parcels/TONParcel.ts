@@ -39,8 +39,8 @@ class TONWallet {
   constructor({
     seedPhrase,
     mainnet = false,
-    version = 4,
-    client, // Optional shared client
+    version = 5,
+    client /* Optional shared client */,
   }: {
     seedPhrase: string;
     mainnet?: boolean;
@@ -124,34 +124,34 @@ class TONWallet {
 
     while (Date.now() - start < timeout) {
       try {
-        // Check if seqno has increased (transaction confirmed)
+        /* Check if seqno has increased (transaction confirmed) */
         const currentSeqno = await this.wallet!.contract.getSeqno();
 
         if (currentSeqno > expectedSeqno) {
-          // Transaction confirmed, now get transaction history to find the hash
+          /* Transaction confirmed, now get transaction history to find the hash */
           const transactions = await this.client.getTransactions(
             this.wallet!.address,
             { limit: 5 }
           );
 
-          // Find the transaction with the expected seqno
+          /* Find the transaction with the expected seqno */
           for (const tx of transactions) {
             if (
               tx.inMessage?.info.src === null &&
               tx.description.type === "generic"
             ) {
-              // This is likely our outgoing transaction
+              /* This is likely our outgoing transaction */
               return tx.hash().toString("hex");
             }
           }
 
-          // If we can't find the specific transaction, return the latest transaction hash
+          /* If we can't find the specific transaction, return the latest transaction hash */
           if (transactions.length > 0) {
             return transactions[0].hash().toString("hex");
           }
         }
 
-        // Wait before next check
+        /* Wait before next check */
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
         console.warn("Error checking transaction status:", error);
@@ -159,7 +159,7 @@ class TONWallet {
       }
     }
 
-    // Timeout reached, return empty hash
+    /* Timeout reached, return empty hash */
     throw new Error("Transaction confirmation timeout");
   }
 
@@ -200,10 +200,10 @@ class TONWallet {
       throw new Error("Unsupported wallet version");
     }
 
-    // Send the transaction
+    /* Send the transaction */
     await this.client.sendExternalMessage(this.wallet!.contract, transfer);
 
-    // Wait for transaction confirmation and get the hash
+    /* Wait for transaction confirmation and get the hash */
     const txHash = await this.waitForTransaction(seqno);
 
     return {
@@ -252,13 +252,13 @@ class TONWallet {
     );
 
     const body = beginCell()
-      .storeUint(0xf8a7ea5, 32) // transfer op
+      .storeUint(0xf8a7ea5, 32) /* transfer op */
       .storeUint(0, 64)
       .storeCoins(toNano(jettonAmount))
       .storeAddress(Address.parse(recipientAddress))
       .storeAddress(this.wallet!.contract.address)
-      .storeBit(false) // no custom payload
-      .storeCoins(toNano("0.01")) // forward amount
+      .storeBit(false) /* no custom payload */
+      .storeCoins(toNano("0.01")) /* forward amount */
       .storeBit(false)
       .endCell();
 
@@ -298,10 +298,10 @@ class TONWallet {
       throw new Error("Unsupported wallet version");
     }
 
-    // Send the transaction
+    /* Send the transaction */
     await this.client.sendExternalMessage(this.wallet!.contract, transfer);
 
-    // Wait for transaction confirmation and get the hash
+    /* Wait for transaction confirmation and get the hash */
     const txHash = await this.waitForTransaction(seqno);
 
     return {
@@ -325,7 +325,7 @@ class TONParcel implements Parcel {
     });
   }
 
-  private createWallet(seedPhrase: string, version: 4 | 5 = 4): TONWallet {
+  private createWallet(seedPhrase: string, version: 4 | 5 = 5): TONWallet {
     return new TONWallet({
       seedPhrase,
       version,
@@ -347,7 +347,7 @@ class TONParcel implements Parcel {
   }): Promise<TransactionResult[]> {
     const perAddressAmount = (parseFloat(amount) / addresses.length).toFixed(9);
 
-    // Extract mnemonic from wallet (could be in mnemonic or privateKey field)
+    /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
     const seedPhrase = wallet.mnemonic || wallet.privateKey;
     if (!seedPhrase) {
       throw new Error(
@@ -355,17 +355,20 @@ class TONParcel implements Parcel {
       );
     }
 
-    const tonWallet = this.createWallet(seedPhrase, 4); // Default to v4
+    const tonWallet = this.createWallet(
+      seedPhrase,
+      wallet.version as 4 | 5
+    ); /* Default to v5 */
 
     const results: TransactionResult[] = [];
     for (const address of addresses) {
       try {
         let result;
         if (!token.address || token.address === "native") {
-          // Native TON transfer
+          /* Native TON transfer */
           result = await tonWallet.transferNativeTon(address, perAddressAmount);
         } else {
-          // Jetton transfer
+          /* Jetton transfer */
           result = await tonWallet.transferJetton(
             token.address,
             address,
@@ -402,9 +405,9 @@ class TONParcel implements Parcel {
     token: Token;
     amount?: string;
   }): Promise<TransactionResult[]> {
-    // Create transfer promises for parallel execution
+    /* Create transfer promises for parallel execution */
     const transferPromises = senders.map(async (wallet) => {
-      // Extract mnemonic from wallet (could be in mnemonic or privateKey field)
+      /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
       const seedPhrase = wallet.mnemonic || wallet.privateKey;
       if (!seedPhrase) {
         return {
@@ -415,17 +418,21 @@ class TONParcel implements Parcel {
         };
       }
 
-      const tonWallet = this.createWallet(seedPhrase, 4); // Default to v4
+      const tonWallet = this.createWallet(
+        seedPhrase,
+        wallet.version as 4 | 5
+      ); /* Default to v5 */
 
       try {
         let result;
-        const transferAmount = amount || "0.1"; // Default amount if not specified
+        const transferAmount =
+          amount || "0.1"; /* Default amount if not specified */
 
         if (!token.address || token.address === "native") {
-          // Native TON transfer
+          /* Native TON transfer */
           result = await tonWallet.transferNativeTon(receiver, transferAmount);
         } else {
-          // Jetton transfer
+          /* Jetton transfer */
           result = await tonWallet.transferJetton(
             token.address,
             receiver,
@@ -448,7 +455,7 @@ class TONParcel implements Parcel {
       }
     });
 
-    // Execute all transfers in parallel
+    /* Execute all transfers in parallel */
     const results = await Promise.all(transferPromises);
     return results;
   }

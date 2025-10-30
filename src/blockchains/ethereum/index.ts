@@ -17,5 +17,5 @@ export const tokens: Token[] = [
   },
 ];
 
-export { EVMCustomTokenForm as CustomTokenForm } from "../../partials/evm/EVMCustomTokenForm";
 export { EVMWalletForm as WalletForm } from "../../partials/evm/EVMWalletForm";
+export { EVMCustomTokenForm as CustomTokenForm } from "../../partials/evm/EVMCustomTokenForm";
