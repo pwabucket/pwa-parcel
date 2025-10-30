@@ -42,7 +42,7 @@ const ActionCard = ({
     <Link
       to={to}
       className={cn(
-        "group relative overflow-hidden rounded-lg p-6 transition-all duration-300 hover:scale-105",
+        "group relative border overflow-hidden rounded-lg p-6 transition-all duration-300 hover:scale-105",
         styles.border,
         styles.background,
         className
@@ -58,9 +58,7 @@ const ActionCard = ({
           {icon}
         </div>
         <div>
-          <h3
-            className={cn("text-xl font-bold transition-colors", styles.title)}
-          >
+          <h3 className={cn("font-bold transition-colors", styles.title)}>
             {title}
           </h3>
           <p className={cn("text-sm font-mono mt-1", styles.description)}>
