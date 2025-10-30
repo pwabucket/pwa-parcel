@@ -1,5 +1,6 @@
 import { cn } from "../lib/utils";
 import type { Blockchain } from "../types";
+import AppIcon from "../assets/icon.svg";
 
 const BlockchainInfo = ({ blockchain }: { blockchain?: Blockchain }) => (
   <h3
@@ -8,8 +9,12 @@ const BlockchainInfo = ({ blockchain }: { blockchain?: Blockchain }) => (
       "text-center text-purple-300 text-xl font-extralight"
     )}
   >
-    <img src={blockchain?.icon} alt="" className="size-16 shrink-0" />
-    {blockchain?.name}
+    <img
+      src={blockchain?.icon || AppIcon}
+      alt=""
+      className="size-16 shrink-0"
+    />
+    {blockchain?.name || "Select a Blockchain"}
   </h3>
 );
 

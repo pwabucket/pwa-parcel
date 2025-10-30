@@ -1,5 +1,6 @@
 import { blockchains } from "../resources/blockchains";
 import { BasePicker } from "./BasePicker";
+import { BlockchainInfo } from "./BlockchainInfo";
 
 interface BlockchainPickerProps {
   onSelect?: (blockchainId: string) => void;
@@ -8,6 +9,9 @@ interface BlockchainPickerProps {
 const BlockchainPicker = ({ onSelect }: BlockchainPickerProps) => {
   return (
     <>
+      {/* Blockchain Info */}
+      <BlockchainInfo />
+
       <BasePicker
         title="Select a Blockchain"
         items={Object.values(blockchains).map((blockchain) => ({
