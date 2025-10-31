@@ -59,7 +59,6 @@ class TONWallet {
   private seedPhrase: string;
   private version: 4 | 5;
   private client: TonClient;
-  private apiClient: TonApiClient;
   private wallet: {
     keyPair: KeyPair;
     contract:
@@ -81,7 +80,6 @@ class TONWallet {
   }) {
     this.seedPhrase = seedPhrase;
     this.version = version;
-    this.apiClient = new TonApiClient(mainnet);
 
     if (client) {
       /* Use shared client */
@@ -200,7 +198,7 @@ class TONWallet {
         messages: [
           internal({
             to: this.wallet!.address,
-            value: toNano("0.01") /* Deployment amount */,
+            value: toNano("0.0055") /* Deployment amount */,
             bounce: false /* Important: set bounce to false for deployment */,
           }),
         ],
@@ -214,7 +212,7 @@ class TONWallet {
         messages: [
           internal({
             to: this.wallet!.address,
-            value: toNano("0.01") /* Deployment amount */,
+            value: toNano("0.0055") /* Deployment amount */,
             bounce: false /* Important: set bounce to false for deployment */,
           }),
         ],
@@ -318,7 +316,7 @@ class TONWallet {
 
     /* Check if wallet has sufficient balance for transfer + gas */
     const currentBalance = await this.client.getBalance(this.wallet!.address);
-    const gasEstimate = toNano("0.01"); /* Estimate gas fees */
+    const gasEstimate = toNano("0.0055"); /* Estimate gas fees */
     const totalRequired = amountNano + gasEstimate;
 
     console.log("Balance for transfer:", fromNano(currentBalance));
@@ -386,7 +384,10 @@ class TONWallet {
     };
   }
 
-  async getJettonBalance(jettonMasterAddress: string): Promise<string> {
+  async getJettonBalance(
+    jettonMasterAddress: string,
+    jettonDecimals: number
+  ): Promise<string> {
     await this.initWallet();
 
     try {
@@ -399,14 +400,8 @@ class TONWallet {
       const jettonWallet = this.client.open(JettonWallet.create(walletAddress));
       const balance = await jettonWallet.getBalance();
 
-      /* Get decimals from TON API */
-      const jettonInfo = await this.apiClient.getJettonInfo(
-        jettonMasterAddress
-      );
-      const decimals = jettonInfo.decimals;
-
       /* Convert balance using correct decimals */
-      const divisor = BigInt(10 ** decimals);
+      const divisor = BigInt(10 ** jettonDecimals);
       const balanceNumber = Number(balance) / Number(divisor);
 
       return balanceNumber.toString();
@@ -417,6 +412,7 @@ class TONWallet {
 
   async transferJetton(
     jettonMasterAddress: string,
+    jettonDecimals: number,
     recipientAddress: string,
     jettonAmount: string
   ) {
@@ -437,12 +433,8 @@ class TONWallet {
       JettonWallet.create(jettonWalletAddress)
     );
 
-    /* Get decimals from TON API */
-    const jettonInfo = await this.apiClient.getJettonInfo(jettonMasterAddress);
-    const decimals = jettonInfo.decimals;
-
     /* Convert amount using correct decimals */
-    const multiplier = BigInt(10 ** decimals);
+    const multiplier = BigInt(10 ** jettonDecimals);
     const requiredAmount = BigInt(
       Math.floor(parseFloat(jettonAmount) * Number(multiplier))
     );
@@ -461,13 +453,13 @@ class TONWallet {
 
     /* Check if wallet has sufficient TON for gas fees */
     const currentBalance = await this.client.getBalance(this.wallet!.address);
-    const gasEstimate =
-      toNano("0.05"); /* Higher gas estimate for jetton transfers */
+    const jettonGasEstimate =
+      toNano("0.037"); /* Higher gas estimate for jetton transfers */
 
-    if (currentBalance < gasEstimate) {
+    if (currentBalance < jettonGasEstimate) {
       throw new Error(
         `Insufficient TON balance for gas fees. Required: ${fromNano(
-          gasEstimate
+          jettonGasEstimate
         )} TON, Available: ${fromNano(currentBalance)} TON`
       );
     }
@@ -497,7 +489,7 @@ class TONWallet {
           internal({
             to: jettonWallet.address,
             value:
-              toNano("0.08") /* Increased gas amount for jetton transfers */,
+              toNano("0.06") /* Increased gas amount for jetton transfers */,
             bounce: false /* Set bounce to false */,
             body,
           }),
@@ -513,7 +505,7 @@ class TONWallet {
           internal({
             to: jettonWallet.address,
             value:
-              toNano("0.08") /* Increased gas amount for jetton transfers */,
+              toNano("0.06") /* Increased gas amount for jetton transfers */,
             bounce: false /* Set bounce to false */,
             body,
           }),
@@ -541,6 +533,7 @@ class TONWallet {
 
 class TONParcel implements Parcel {
   private sharedClient: TonClient;
+  private apiClient: TonApiClient;
   private mainnet: boolean;
 
   constructor({ mainnet = false }: { mainnet?: boolean } = {}) {
@@ -551,6 +544,7 @@ class TONParcel implements Parcel {
         ? import.meta.env.VITE_TON_MAINNET_API_KEY
         : import.meta.env.VITE_TON_TESTNET_API_KEY,
     });
+    this.apiClient = new TonApiClient(mainnet);
   }
 
   private createWallet(seedPhrase: string, version: 4 | 5 = 5): TONWallet {
@@ -588,17 +582,26 @@ class TONParcel implements Parcel {
       wallet.version as 4 | 5
     ); /* Default to v5 */
 
+    let jettonDecimals = 9;
+
+    if (token.address) {
+      /* Get jetton decimals from TON API */
+      const jettonInfo = await this.apiClient.getJettonInfo(token.address);
+      jettonDecimals = jettonInfo.decimals;
+    }
+
     const results: TransactionResult[] = [];
     for (const address of addresses) {
       try {
         let result;
-        if (!token.address || token.address === "native") {
+        if (!token.address) {
           /* Native TON transfer */
           result = await tonWallet.transferNativeTon(address, perAddressAmount);
         } else {
           /* Jetton transfer */
           result = await tonWallet.transferJetton(
             token.address,
+            jettonDecimals,
             address,
             perAddressAmount
           );
@@ -633,6 +636,14 @@ class TONParcel implements Parcel {
     token: Token;
     amount?: string;
   }): Promise<TransactionResult[]> {
+    let jettonDecimals = 9;
+
+    if (token.address) {
+      /* Get jetton decimals from TON API */
+      const jettonInfo = await this.apiClient.getJettonInfo(token.address);
+      jettonDecimals = jettonInfo.decimals;
+    }
+
     /* Create transfer promises for parallel execution */
     const transferPromises = senders.map(async (wallet) => {
       /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
@@ -654,14 +665,14 @@ class TONParcel implements Parcel {
       try {
         let result;
 
-        if (!token.address || token.address === "native") {
+        if (!token.address) {
           let transferAmount = amount;
 
           if (!transferAmount) {
             /* If amount not specified, transfer entire balance minus gas */
             const balance = await tonWallet.getNativeTonBalance();
             const balanceNano = toNano(balance);
-            const gasEstimate = toNano("0.01");
+            const gasEstimate = toNano("0.0055");
             if (balanceNano <= gasEstimate) {
               throw new Error("Insufficient balance to cover gas fees");
             }
@@ -675,13 +686,17 @@ class TONParcel implements Parcel {
 
           if (!transferAmount) {
             /* If amount not specified, transfer entire jetton balance */
-            const balance = await tonWallet.getJettonBalance(token.address);
+            const balance = await tonWallet.getJettonBalance(
+              token.address,
+              jettonDecimals
+            );
             transferAmount = balance;
           }
 
           /* Jetton transfer */
           result = await tonWallet.transferJetton(
             token.address,
+            jettonDecimals,
             receiver,
             transferAmount
           );
