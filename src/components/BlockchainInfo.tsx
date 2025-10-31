@@ -14,7 +14,7 @@ const BlockchainInfo = ({ blockchain }: { blockchain?: Blockchain }) => (
       alt=""
       className="size-16 shrink-0"
     />
-    {blockchain?.name || "Select a Blockchain"}
+    {blockchain?.name || "Parcel"}
   </h3>
 );
 
