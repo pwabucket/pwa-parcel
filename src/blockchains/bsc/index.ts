@@ -1,5 +1,6 @@
 import { EVMParcel, type EVMParcelOptions } from "../../parcels/EVMParcel";
 import type { Token } from "../../types";
+export * from "../../partials/evm";
 
 export const id = "bsc";
 export const name = "Binance Smart Chain";
@@ -28,6 +29,3 @@ export class Parcel extends EVMParcel {
     });
   }
 }
-
-export { EVMWalletForm as WalletForm } from "../../partials/evm/EVMWalletForm";
-export { EVMCustomTokenForm as CustomTokenForm } from "../../partials/evm/EVMCustomTokenForm";

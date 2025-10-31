@@ -1,5 +1,6 @@
 import { EVMParcel, type EVMParcelOptions } from "../../parcels/EVMParcel";
 import type { Token } from "../../types";
+export * from "../../partials/evm";
 
 export const id = "base";
 export const name = "Base";
@@ -26,6 +27,3 @@ export class Parcel extends EVMParcel {
     });
   }
 }
-
-export { EVMWalletForm as WalletForm } from "../../partials/evm/EVMWalletForm";
-export { EVMCustomTokenForm as CustomTokenForm } from "../../partials/evm/EVMCustomTokenForm";
