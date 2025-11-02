@@ -303,47 +303,66 @@ class TONWallet {
     return fromNano(balance);
   }
 
-  async transferNativeTon(recipientAddress: string, amountTon: string) {
+  async transferNativeTon(
+    recipientAddress: string,
+    amountTon: string,
+    gasIncluded: boolean = false
+  ) {
     await this.initWallet();
 
     /* Automatically deploy wallet if not already deployed */
     await this.deployWallet();
 
-    console.log("Transferring", amountTon, "TON to", recipientAddress);
+    /* Log transfer details */
+    console.log(
+      "Transferring",
+      amountTon,
+      "TON to",
+      recipientAddress,
+      gasIncluded ? "(gas included)" : "(gas separate)"
+    );
 
     const recipient = Address.parse(recipientAddress);
     const amountNano = toNano(amountTon);
 
-    /* Check if wallet has sufficient balance for transfer + gas */
-    const currentBalance = await this.client.getBalance(this.wallet!.address);
-    const gasEstimate = toNano("0.0055"); /* Estimate gas fees */
-    const totalRequired = amountNano + gasEstimate;
+    /* Only check balance and gas requirements if gas is not included */
+    if (!gasIncluded) {
+      /* Check if wallet has sufficient balance for transfer + gas */
+      const currentBalance = await this.client.getBalance(this.wallet!.address);
+      const gasEstimate = toNano("0.0055"); /* Estimate gas fees */
+      const totalRequired = amountNano + gasEstimate;
 
-    console.log("Balance for transfer:", fromNano(currentBalance));
+      console.log("Balance for transfer:", fromNano(currentBalance));
 
-    if (currentBalance < totalRequired) {
-      throw new Error(
-        `Insufficient balance. Required: ${fromNano(
-          totalRequired
-        )} TON (${amountTon} + gas), Available: ${fromNano(currentBalance)} TON`
-      );
+      if (currentBalance < totalRequired) {
+        throw new Error(
+          `Insufficient balance. Required: ${fromNano(
+            totalRequired
+          )} TON (${amountTon} + gas), Available: ${fromNano(
+            currentBalance
+          )} TON`
+        );
+      }
     }
 
     const seqno = await this.wallet!.contract.getSeqno();
 
     console.log("Amount (nano):", amountNano.toString());
     console.log("Amount (TON):", fromNano(amountNano));
-    console.log("Current balance:", fromNano(currentBalance));
     console.log("Seqno:", seqno);
 
     let transfer;
+
+    /* Determine send mode based on gasIncluded parameter */
+    const sendMode = gasIncluded
+      ? SendMode.CARRY_ALL_REMAINING_BALANCE
+      : SendMode.PAY_GAS_SEPARATELY;
 
     if (this.isWalletV4(this.wallet!.contract)) {
       transfer = await this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
-        sendMode:
-          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS to catch failures */,
+        sendMode,
         messages: [
           internal({
             to: recipient,
@@ -356,8 +375,7 @@ class TONWallet {
       transfer = this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
-        sendMode:
-          SendMode.PAY_GAS_SEPARATELY /* Remove IGNORE_ERRORS to catch failures */,
+        sendMode,
         messages: [
           internal({
             to: recipient,
@@ -596,7 +614,11 @@ class TONParcel implements Parcel {
         let result;
         if (!token.address) {
           /* Native TON transfer */
-          result = await tonWallet.transferNativeTon(address, perAddressAmount);
+          result = await tonWallet.transferNativeTon(
+            address,
+            perAddressAmount,
+            false
+          );
         } else {
           /* Jetton transfer */
           result = await tonWallet.transferJetton(
@@ -680,7 +702,11 @@ class TONParcel implements Parcel {
           }
 
           /* Native TON transfer */
-          result = await tonWallet.transferNativeTon(receiver, transferAmount);
+          result = await tonWallet.transferNativeTon(
+            receiver,
+            transferAmount,
+            !amount /* Include gas if amount not specified */
+          );
         } else {
           let transferAmount = amount;
 
