@@ -52,7 +52,7 @@ const TONConfigForm = ({ onSubmit }: TONConfigFormProps) => {
                 >
                   @toncenter
                 </Link>{" "}
-                to avoid rate limits .
+                to avoid rate limits.
               </p>
               <FormFieldError message={fieldState.error?.message} />
             </>
