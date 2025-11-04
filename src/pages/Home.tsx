@@ -2,6 +2,8 @@ import AppIcon from "../assets/icon.svg";
 import { Container } from "../components/Container";
 import { ActionCard } from "../components/ActionCard";
 import { AiOutlineMerge, AiOutlineSplitCells } from "react-icons/ai";
+import { Link } from "react-router";
+import { SiGithub } from "react-icons/si";
 
 const Home = () => {
   return (
@@ -33,6 +35,22 @@ const Home = () => {
             description="Combine tokens from multiple sources"
             variant="green"
           />
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-2">
+          {/* Repository URL */}
+          <Link
+            to={import.meta.env.VITE_APP_REPOSITORY_URL || "#"}
+            target="_blank"
+            className="text-purple-300 text-sm flex justify-center items-center gap-2"
+          >
+            <SiGithub className="size-4 inline-block" /> <span>GitHub</span>
+          </Link>
+
+          {/* Version Number */}
+          <p className="text-center text-neutral-500 text-xs">
+            v{import.meta.env.PACKAGE_VERSION}
+          </p>
         </div>
       </Container>
     </div>
