@@ -29,7 +29,16 @@ export interface Blockchain {
   tokens: Token[];
   CustomTokenForm: React.ComponentType<CustomTokenFormProps>;
   WalletForm: React.ComponentType<WalletFormProps>;
-  Parcel: new ({ mainnet }: { mainnet: boolean }) => Parcel;
+  ConfigForm?: React.ComponentType<{
+    onSubmit: (config: Record<string, unknown>) => void;
+  }>;
+  Parcel: new ({
+    mainnet,
+    config,
+  }: {
+    mainnet: boolean;
+    config: Record<string, unknown> | null;
+  }) => Parcel;
 }
 
 export interface Parcel {

@@ -20,6 +20,7 @@ const useBlockchain = () => {
 
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [receiver, setReceiver] = useState<string | null>(null);
+  const [config, setConfig] = useState<Record<string, unknown> | null>(null);
 
   const [recipients, setRecipients] = useState<string[]>([]);
   const [senders, setSenders] = useState<Wallet[]>([]);
@@ -30,9 +31,11 @@ const useBlockchain = () => {
 
   const CustomTokenForm = blockchain ? blockchain.CustomTokenForm : null;
   const WalletForm = blockchain ? blockchain.WalletForm : null;
+  const ConfigForm = blockchain ? blockchain.ConfigForm : null;
   const Parcel = blockchain ? blockchain.Parcel : null;
 
   const [showCustomTokenForm, setShowCustomTokenForm] = useState(false);
+  const isBlockchainSelected = Boolean(blockchain);
   const isTokenSelected = Boolean(blockchain && token);
   const isAmountSet = Boolean(isTokenSelected && amount);
   const isRecipientsSet = Boolean(
@@ -54,6 +57,9 @@ const useBlockchain = () => {
   const isWalletConfigured = Boolean(
     wallet && location.state?.wallet && wallet.address === location.state.wallet
   );
+
+  const isConfigSet = Boolean(isBlockchainSelected && (!ConfigForm || config));
+  const showConfigForm = Boolean(isBlockchainSelected && ConfigForm && !config);
 
   const setBlockchain = (blockchainId: string) => {
     navigate(location, { state: { blockchain: blockchainId } });
@@ -136,6 +142,8 @@ const useBlockchain = () => {
     isTokenSelected,
     isRecipientsSet,
     isSendersSet,
+    isBlockchainSelected,
+    showConfigForm,
     showCustomTokenForm,
     isWalletConfigured,
     WalletForm,
@@ -151,6 +159,10 @@ const useBlockchain = () => {
     configureRecipients,
     configureSenders,
     configureReceiver,
+    ConfigForm,
+    config,
+    setConfig,
+    isConfigSet,
   };
 };
 

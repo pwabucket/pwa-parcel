@@ -19,3 +19,4 @@ export { TONParcel as Parcel } from "../../parcels/TONParcel";
 
 export { TONCustomTokenForm as CustomTokenForm } from "./TONCustomTokenForm";
 export { TONWalletForm as WalletForm } from "./TONWalletForm";
+export { TONConfigForm as ConfigForm } from "./TONConfigForm";

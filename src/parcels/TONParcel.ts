@@ -71,12 +71,14 @@ class TONWallet {
     seedPhrase,
     mainnet = false,
     version = 5,
+    apiKey,
     client /* Optional shared client */,
   }: {
     seedPhrase: string;
     mainnet?: boolean;
     version?: 4 | 5;
     client?: TonClient;
+    apiKey?: string;
   }) {
     this.seedPhrase = seedPhrase;
     this.version = version;
@@ -88,7 +90,9 @@ class TONWallet {
       /* Create new client */
       this.client = new TonClient({
         endpoint: mainnet ? TON_MAINNET_RPC : TON_TESTNET_RPC,
-        apiKey: mainnet
+        apiKey: apiKey
+          ? apiKey
+          : mainnet
           ? import.meta.env.VITE_TON_MAINNET_API_KEY
           : import.meta.env.VITE_TON_TESTNET_API_KEY,
       });
@@ -549,16 +553,30 @@ class TONWallet {
   }
 }
 
+interface TONParcelConfig {
+  apiKey: string;
+}
+
 class TONParcel implements Parcel {
   private sharedClient: TonClient;
   private apiClient: TonApiClient;
   private mainnet: boolean;
+  private config: TONParcelConfig;
 
-  constructor({ mainnet = false }: { mainnet?: boolean } = {}) {
+  constructor({
+    mainnet = false,
+    config,
+  }: {
+    mainnet?: boolean;
+    config: TONParcelConfig;
+  }) {
     this.mainnet = mainnet;
+    this.config = config;
     this.sharedClient = new TonClient({
       endpoint: mainnet ? TON_MAINNET_RPC : TON_TESTNET_RPC,
-      apiKey: mainnet
+      apiKey: this.config.apiKey
+        ? this.config.apiKey
+        : mainnet
         ? import.meta.env.VITE_TON_MAINNET_API_KEY
         : import.meta.env.VITE_TON_TESTNET_API_KEY,
     });
@@ -571,6 +589,7 @@ class TONParcel implements Parcel {
       version,
       client: this.sharedClient,
       mainnet: this.mainnet,
+      apiKey: this.config.apiKey,
     });
   }
 

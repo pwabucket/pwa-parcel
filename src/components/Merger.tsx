@@ -15,8 +15,15 @@ interface MergerProps {
 }
 
 const Merger = ({ setup }: MergerProps) => {
-  const { blockchain, receiver, token, senders, configureReceiver, Parcel } =
-    setup;
+  const {
+    blockchain,
+    config,
+    receiver,
+    token,
+    senders,
+    configureReceiver,
+    Parcel,
+  } = setup;
   const [showReceiverSetup, setShowReceiverSetup] = useState(false);
 
   const mutation = useMutation({
@@ -25,7 +32,10 @@ const Merger = ({ setup }: MergerProps) => {
       if (!Parcel) {
         throw new Error("Parcel is not defined");
       }
-      const parcelInstance = new Parcel({ mainnet: import.meta.env.PROD });
+      const parcelInstance = new Parcel({
+        mainnet: import.meta.env.PROD,
+        config,
+      });
       return parcelInstance.merge({
         senders,
         receiver: receiver!,
