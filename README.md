@@ -1,75 +1,40 @@
-# React + TypeScript + Vite
+[![Open App](https://img.shields.io/badge/Open%20App-grey?style=for-the-badge&logo=googlechrome&logoColor=dab2ff)](https://parcel.pwabucket.com) [![Open in Store](https://img.shields.io/badge/Open-in%20Store-9c27b0?style=for-the-badge&logo=pwa&logoColor=white)](https://pwabucket.com/apps/pwa-parcel)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Parcel
 
-Currently, two official plugins are available:
+> **Split tokens to multiple addresses or Merge tokens from multiple sources on any blockchain.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## React Compiler
+<p align="center">
+  <img src="/public/social-preview.png" width="100%" />
+  <img src="/public/screenshot-mobile-1.jpg" width="49%" />
+  <img src="/public/screenshot-mobile-2.jpg" width="49%" />
+  <img src="/public/screenshot-mobile-3.jpg" width="49%" />
+  <img src="/public/screenshot-mobile-4.jpg" width="49%" />
+</p>
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
 
-Note: This will impact Vite dev & build performances.
+## License
 
-## Expanding the ESLint configuration
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Links
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Repository**: [GitHub](https://github.com/pwabucket/pwa-parcel)
+- **Issues**: [Bug Reports & Feature Requests](https://github.com/pwabucket/pwa-parcel/issues)
+- **Discussions**: [Community Discussions](https://github.com/pwabucket/pwa-parcel/discussions)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Disclaimer ⚠️
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Parcel is provided "as is" without warranty. Users are responsible for:
+- Securing their private keys
+- Verifying transaction details before execution
+- Understanding network fees and risks
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**Use at your own risk. The developers are not responsible for any loss of funds.**
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+<div align="center">
+  <strong>Built with ❤️ by PWABucket</strong>
+</div>
