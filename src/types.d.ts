@@ -45,28 +45,20 @@ export interface ParcelParams {
 }
 
 export interface Parcel {
-  split: ({
-    wallet,
-    addresses,
-    token,
-    amount,
-  }: {
+  split: (splitOptions: {
     wallet: Wallet;
     addresses: string[];
     token: Token;
     amount: string;
+    updateProgress: () => void;
   }) => Promise<TransactionResult[]>;
 
-  merge: ({
-    senders,
-    receiver,
-    token,
-    amount,
-  }: {
+  merge: (mergeOptions: {
     senders: Wallet[];
     receiver: string;
     token: Token;
     amount?: string;
+    updateProgress: () => void;
   }) => Promise<TransactionResult[]>;
 }
 

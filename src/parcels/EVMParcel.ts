@@ -730,12 +730,14 @@ export class EVMParcel implements Parcel {
     addresses,
     token,
     amount,
+    updateProgress,
     options = {},
   }: {
     wallet: Wallet;
     addresses: string[];
     token: Token;
     amount: string;
+    updateProgress: () => void;
     options?: {
       gasPrice?: bigint;
       contractAddress?: string /* If provided, treats as token transfer */;
@@ -754,24 +756,28 @@ export class EVMParcel implements Parcel {
       ? (parseFloat(amount) / addresses.length).toString()
       : (parseFloat(amount) / addresses.length).toFixed(18);
 
-    /* Create split transfer promises for parallel execution */
-    const transferPromises = addresses.map((address) =>
-      token.address
-        ? walletInstance.splitTransferToken(
-            token.address,
-            address,
-            perAddressAmount,
-            options?.gasPrice
-          )
-        : walletInstance.splitTransferNative(
-            address,
-            perAddressAmount,
-            options?.gasPrice
-          )
-    );
+    const results: TransferResult[] = [];
 
-    /* Execute all transfers in parallel */
-    const results = await Promise.all(transferPromises);
+    for (const address of addresses) {
+      let result: TransferResult;
+      if (token.address) {
+        result = await walletInstance.splitTransferToken(
+          token.address,
+          address,
+          perAddressAmount,
+          options?.gasPrice
+        );
+      } else {
+        result = await walletInstance.splitTransferNative(
+          address,
+          perAddressAmount,
+          options?.gasPrice
+        );
+      }
+      results.push(result);
+      updateProgress();
+    }
+
     return results;
   }
 
@@ -781,12 +787,14 @@ export class EVMParcel implements Parcel {
     receiver,
     token,
     amount,
+    updateProgress,
     options = {},
   }: {
     senders: Wallet[];
     receiver: string;
     token: Token;
     amount?: string;
+    updateProgress: () => void;
     options?: {
       gasPrice?: bigint;
     };
@@ -865,8 +873,14 @@ export class EVMParcel implements Parcel {
               options?.gasPrice
             );
 
+        /* Update progress after each transfer */
+        updateProgress();
+
         return result;
       } catch (error) {
+        /* Update progress even on failure */
+        updateProgress();
+
         return {
           status: false,
           txHash: "",

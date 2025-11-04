@@ -5,6 +5,7 @@ import type { Wallet } from "../types";
 import { MergeSendersForm } from "../components/MergeSendersForm";
 import { Merger } from "../components/Merger";
 import { AiOutlineMerge } from "react-icons/ai";
+import { BlockchainContext } from "../contexts/BlockchainContext";
 
 const Merge = () => {
   const setup = useBlockchain();
@@ -20,18 +21,20 @@ const Merge = () => {
       }
       className="flex flex-col gap-2"
     >
-      {isSendersSet ? (
-        <Merger setup={setup} />
-      ) : isTokenSelected ? (
-        <MergeSendersForm
-          setup={setup}
-          onSubmit={(data: { senders: Wallet[] }) =>
-            configureSenders(data.senders)
-          }
-        />
-      ) : (
-        <BlockchainSetup {...setup} />
-      )}
+      <BlockchainContext.Provider value={setup}>
+        {isSendersSet ? (
+          <Merger setup={setup} />
+        ) : isTokenSelected ? (
+          <MergeSendersForm
+            setup={setup}
+            onSubmit={(data: { senders: Wallet[] }) =>
+              configureSenders(data.senders)
+            }
+          />
+        ) : (
+          <BlockchainSetup {...setup} />
+        )}
+      </BlockchainContext.Provider>
     </InnerPageLayout>
   );
 };

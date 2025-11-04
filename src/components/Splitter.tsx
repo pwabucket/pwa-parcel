@@ -9,6 +9,7 @@ import { SplitRecipient } from "./SplitRecipient";
 import { WalletFormDialog } from "./WalletFormDialog";
 import type { Wallet } from "../types";
 import { useMutation } from "@tanstack/react-query";
+import { ParcelProgress } from "./ParcelProgress";
 
 interface SplitterProps {
   setup: ReturnType<typeof useBlockchain>;
@@ -23,6 +24,8 @@ const Splitter = ({ setup }: SplitterProps) => {
     token,
     recipients,
     wallet,
+    resetProgress,
+    updateProgress,
     configureWallet,
     WalletForm,
     Parcel,
@@ -45,16 +48,22 @@ const Splitter = ({ setup }: SplitterProps) => {
       if (!Parcel) {
         throw new Error("Parcel is not defined");
       }
+
+      /* Reset Progress */
+      resetProgress();
+
       const parcelInstance = new Parcel({
         mainnet: import.meta.env.PROD,
         config,
         mode,
       });
+
       return parcelInstance.split({
         wallet: setup.wallet!,
         addresses: recipients,
         token: token!,
         amount: amount!,
+        updateProgress,
       });
     },
   });
@@ -93,6 +102,9 @@ const Splitter = ({ setup }: SplitterProps) => {
             Wallet Address: {wallet.address}
           </p>
         )}
+
+        {/* Progress */}
+        {mutation.isPending && <ParcelProgress max={recipients.length} />}
       </div>
 
       {/* Wallet Setup Dialog */}

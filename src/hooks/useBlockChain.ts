@@ -18,13 +18,17 @@ const useBlockchain = () => {
   const navigate = useNavigate();
   const location: Location<BlockchainLocationState> = useLocation();
 
-  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [mode, setMode] = useState<"single" | "batch">("single");
-  const [receiver, setReceiver] = useState<string | null>(null);
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
+  const [progress, setProgress] = useState<number>(0);
 
+  /* Split States */
+  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [recipients, setRecipients] = useState<string[]>([]);
+
+  /* Merge States */
   const [senders, setSenders] = useState<Wallet[]>([]);
+  const [receiver, setReceiver] = useState<string | null>(null);
 
   const token: Token | null = location.state?.token || null;
   const amount: string | null = location.state?.amount || null;
@@ -136,14 +140,22 @@ const useBlockchain = () => {
     navigateBack();
   };
 
+  const resetProgress = () => {
+    setProgress(0);
+  };
+
+  const updateProgress = () => {
+    setProgress((prev) => prev + 1);
+  };
+
   return {
     token,
-    wallet,
+    blockchain,
     amount,
+    wallet,
     receiver,
     senders,
     recipients,
-    blockchain,
     isAmountSet,
     isTokenSelected,
     isRecipientsSet,
@@ -152,6 +164,14 @@ const useBlockchain = () => {
     showConfigForm,
     showCustomTokenForm,
     isWalletConfigured,
+
+    /* Progress Management */
+    progress,
+    setProgress,
+    resetProgress,
+    updateProgress,
+
+    /* Forms */
     WalletForm,
     CustomTokenForm,
     Parcel,

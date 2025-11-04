@@ -606,11 +606,13 @@ class TONParcel implements Parcel {
     addresses,
     token,
     amount,
+    updateProgress,
   }: {
     wallet: Wallet;
     addresses: string[];
     token: Token;
     amount: string;
+    updateProgress: () => void;
   }): Promise<TransactionResult[]> {
     const perAddressAmount = (parseFloat(amount) / addresses.length).toFixed(9);
 
@@ -661,6 +663,9 @@ class TONParcel implements Parcel {
           to: result.to,
           txHash: result.txHash,
         });
+
+        /* Update progress after each transfer */
+        updateProgress();
       } catch (error) {
         results.push({
           status: false,
@@ -668,6 +673,9 @@ class TONParcel implements Parcel {
           txHash: "",
           error: error instanceof Error ? error.message : "Unknown error",
         });
+
+        /* Update progress even on failure */
+        updateProgress();
       }
     }
 
@@ -679,11 +687,13 @@ class TONParcel implements Parcel {
     receiver,
     token,
     amount,
+    updateProgress,
   }: {
     senders: Wallet[];
     receiver: string;
     token: Token;
     amount?: string;
+    updateProgress: () => void;
   }): Promise<TransactionResult[]> {
     let jettonDecimals = 9;
 
@@ -755,12 +765,18 @@ class TONParcel implements Parcel {
           );
         }
 
+        /* Successful transfer */
+        updateProgress();
+
         return {
           status: true,
           to: result.to,
           txHash: result.txHash,
         };
       } catch (error) {
+        /* Failed transfer */
+        updateProgress();
+
         return {
           status: false,
           to: receiver,

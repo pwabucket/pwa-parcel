@@ -9,6 +9,7 @@ import { MergeSender } from "./MergeSender";
 import { useMutation } from "@tanstack/react-query";
 import { AddressForm } from "./AddressForm";
 import { PopupDialog } from "./PopupDialog";
+import { ParcelProgress } from "./ParcelProgress";
 
 interface MergerProps {
   setup: ReturnType<typeof useBlockchain>;
@@ -22,6 +23,8 @@ const Merger = ({ setup }: MergerProps) => {
     receiver,
     token,
     senders,
+    resetProgress,
+    updateProgress,
     configureReceiver,
     Parcel,
   } = setup;
@@ -33,6 +36,10 @@ const Merger = ({ setup }: MergerProps) => {
       if (!Parcel) {
         throw new Error("Parcel is not defined");
       }
+
+      /* Reset Progress */
+      resetProgress();
+
       const parcelInstance = new Parcel({
         mainnet: import.meta.env.PROD,
         config,
@@ -42,6 +49,7 @@ const Merger = ({ setup }: MergerProps) => {
         senders,
         receiver: receiver!,
         token: token!,
+        updateProgress,
       });
     },
   });
@@ -76,6 +84,9 @@ const Merger = ({ setup }: MergerProps) => {
             Receiver Address: {receiver}
           </p>
         )}
+
+        {/* Progress */}
+        {mutation.isPending && <ParcelProgress max={senders.length} />}
       </div>
 
       {/* Receiver Setup Dialog */}
