@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import type { Parcel, Token, Wallet } from "../types";
+import type { Parcel, ParcelMode, ParcelParams, Token, Wallet } from "../types";
 
 /* EVM Networks Configuration */
 export const NETWORKS = {
@@ -658,9 +658,8 @@ export class EVMWallet {
   }
 }
 
-export interface EVMParcelOptions {
+export interface EVMParcelOptions extends ParcelParams {
   network?: NetworkName;
-  mainnet?: boolean;
   rpcUrl?: string;
 }
 
@@ -671,8 +670,11 @@ export class EVMParcel implements Parcel {
   private rpcUrl?: string;
   private sharedProvider: ethers.JsonRpcProvider;
   private chainId: bigint | null = null;
+  private mode: ParcelMode;
 
-  constructor({ network, mainnet = false, rpcUrl }: EVMParcelOptions = {}) {
+  constructor({ network, mainnet = false, rpcUrl, mode }: EVMParcelOptions) {
+    this.mode = mode;
+
     if (rpcUrl) {
       /* Direct RPC URL provided */
       this.rpcUrl = rpcUrl;
@@ -793,8 +795,8 @@ export class EVMParcel implements Parcel {
       throw new Error("No wallets provided");
     }
 
-    /* Create transfer promises for parallel execution */
-    const transferPromises = senders.map(async (sender) => {
+    /* Transfer callback for each sender */
+    const transferCallback = async (sender: Wallet) => {
       const wallet = this.createWallet(sender.privateKey!);
 
       try {
@@ -874,11 +876,26 @@ export class EVMParcel implements Parcel {
           error: error instanceof Error ? error.message : "Unknown error",
         };
       }
-    });
+    };
 
-    /* Execute all transfers in parallel */
-    const results = await Promise.all(transferPromises);
-    return results;
+    if (this.mode === "single") {
+      /* Execute transfers sequentially in single mode */
+      const results: TransferResult[] = [];
+      for (const sender of senders) {
+        const result = await transferCallback(sender);
+        results.push(result);
+      }
+      return results;
+    } else {
+      /* Create transfer promises for parallel execution */
+      const transferPromises = senders.map((sender) =>
+        transferCallback(sender)
+      );
+
+      /* Execute all transfers in parallel */
+      const results = await Promise.all(transferPromises);
+      return results;
+    }
   }
 
   async getNetworkInfo() {

@@ -33,13 +33,15 @@ export interface Blockchain {
   ConfigForm?: React.ComponentType<{
     onSubmit: (config: Record<string, unknown>) => void;
   }>;
-  Parcel: new ({
-    mainnet,
-    config,
-  }: {
-    mainnet: boolean;
-    config: Record<string, unknown> | null;
-  }) => Parcel;
+  Parcel: new (params: ParcelParams) => Parcel;
+}
+
+export type ParcelMode = "single" | "batch";
+
+export interface ParcelParams {
+  mainnet: boolean;
+  config: Record<string, unknown> | null;
+  mode: ParcelMode;
 }
 
 export interface Parcel {

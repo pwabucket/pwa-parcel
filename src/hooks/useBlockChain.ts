@@ -19,6 +19,7 @@ const useBlockchain = () => {
   const location: Location<BlockchainLocationState> = useLocation();
 
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [mode, setMode] = useState<"single" | "batch">("single");
   const [receiver, setReceiver] = useState<string | null>(null);
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
 
@@ -167,6 +168,8 @@ const useBlockchain = () => {
     configureReceiver,
     ConfigForm,
     config,
+    mode,
+    setMode,
     setConfig,
     isConfigSet,
   };

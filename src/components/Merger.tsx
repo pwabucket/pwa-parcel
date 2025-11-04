@@ -17,6 +17,7 @@ interface MergerProps {
 const Merger = ({ setup }: MergerProps) => {
   const {
     blockchain,
+    mode,
     config,
     receiver,
     token,
@@ -35,6 +36,7 @@ const Merger = ({ setup }: MergerProps) => {
       const parcelInstance = new Parcel({
         mainnet: import.meta.env.PROD,
         config,
+        mode,
       });
       return parcelInstance.merge({
         senders,

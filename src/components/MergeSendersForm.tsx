@@ -18,6 +18,7 @@ import { AddressesContainer } from "./AddressesContainer";
 import { MergeInformation } from "./MergeInformation";
 import { WalletFormDialog } from "./WalletFormDialog";
 import type { Wallet } from "../types";
+import { cn } from "../lib/utils";
 
 const schema = yup.object({
   senders: yup
@@ -48,7 +49,7 @@ interface MergeSendersFormProps {
 
 const MergeSendersForm = ({ setup, onSubmit }: MergeSendersFormProps) => {
   const [showAddSenderDialog, setShowAddSenderDialog] = useState(false);
-  const { token, blockchain, senders, WalletForm } = setup;
+  const { mode, token, blockchain, senders, WalletForm, setMode } = setup;
   const form = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -94,6 +95,24 @@ const MergeSendersForm = ({ setup, onSubmit }: MergeSendersFormProps) => {
       >
         {WalletForm && <WalletForm onSubmit={addSender} />}
       </WalletFormDialog>
+
+      {/* Mode Selection */}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant={"outline"}
+          className={cn(mode === "single" && "text-purple-300 font-bold")}
+          onClick={() => setMode("single")}
+        >
+          Single Mode
+        </Button>
+        <Button
+          variant={"outline"}
+          className={cn(mode === "batch" && "text-purple-300 font-bold")}
+          onClick={() => setMode("batch")}
+        >
+          Batch Mode
+        </Button>
+      </div>
 
       {/* Form */}
       <FormProvider {...form}>

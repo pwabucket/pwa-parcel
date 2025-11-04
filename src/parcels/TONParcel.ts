@@ -13,7 +13,13 @@ import {
   SendMode,
 } from "@ton/ton";
 import { mnemonicNew, mnemonicToWalletKey, type KeyPair } from "@ton/crypto";
-import type { Parcel, Wallet, Token, TransactionResult } from "../types";
+import type {
+  Parcel,
+  Wallet,
+  Token,
+  TransactionResult,
+  ParcelParams,
+} from "../types";
 
 /* Simple HTTP client for TON API */
 class TonApiClient {
@@ -562,16 +568,18 @@ class TONParcel implements Parcel {
   private apiClient: TonApiClient;
   private mainnet: boolean;
   private config: TONParcelConfig;
+  private mode: "single" | "batch";
 
   constructor({
     mainnet = false,
     config,
-  }: {
-    mainnet?: boolean;
+    mode = "single",
+  }: ParcelParams & {
     config: TONParcelConfig;
   }) {
     this.mainnet = mainnet;
     this.config = config;
+    this.mode = mode;
     this.sharedClient = new TonClient({
       endpoint: mainnet ? TON_MAINNET_RPC : TON_TESTNET_RPC,
       apiKey: this.config.apiKey
@@ -685,8 +693,8 @@ class TONParcel implements Parcel {
       jettonDecimals = jettonInfo.decimals;
     }
 
-    /* Create transfer promises for parallel execution */
-    const transferPromises = senders.map(async (wallet) => {
+    /* Define transfer callback function */
+    const transferCallback = async (wallet: Wallet) => {
       /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
       const seedPhrase = wallet.mnemonic || wallet.privateKey;
       if (!seedPhrase) {
@@ -760,11 +768,25 @@ class TONParcel implements Parcel {
           error: error instanceof Error ? error.message : "Unknown error",
         };
       }
-    });
+    };
 
-    /* Execute all transfers in parallel */
-    const results = await Promise.all(transferPromises);
-    return results;
+    if (this.mode === "single") {
+      const results: TransactionResult[] = [];
+      for (const sender of senders) {
+        const result = await transferCallback(sender);
+        results.push(result);
+      }
+      return results;
+    } else {
+      /* Create transfer promises for parallel execution */
+      const transferPromises = senders.map((sender) =>
+        transferCallback(sender)
+      );
+
+      /* Execute all transfers in parallel */
+      const results = await Promise.all(transferPromises);
+      return results;
+    }
   }
 
   async generateTestMnemonic() {
