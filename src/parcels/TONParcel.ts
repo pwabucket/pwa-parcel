@@ -16,9 +16,10 @@ import { mnemonicNew, mnemonicToWalletKey, type KeyPair } from "@ton/crypto";
 import type {
   Parcel,
   Wallet,
-  Token,
   TransactionResult,
   ParcelParams,
+  MergeOptions,
+  SplitOptions,
 } from "../types";
 
 /* Simple HTTP client for TON API */
@@ -607,13 +608,7 @@ class TONParcel implements Parcel {
     token,
     amount,
     updateProgress,
-  }: {
-    wallet: Wallet;
-    addresses: string[];
-    token: Token;
-    amount: string;
-    updateProgress: () => void;
-  }): Promise<TransactionResult[]> {
+  }: SplitOptions): Promise<TransactionResult[]> {
     const perAddressAmount = (parseFloat(amount) / addresses.length).toFixed(9);
 
     /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
@@ -688,13 +683,7 @@ class TONParcel implements Parcel {
     token,
     amount,
     updateProgress,
-  }: {
-    senders: Wallet[];
-    receiver: string;
-    token: Token;
-    amount?: string;
-    updateProgress: () => void;
-  }): Promise<TransactionResult[]> {
+  }: MergeOptions): Promise<TransactionResult[]> {
     let jettonDecimals = 9;
 
     if (token.address) {

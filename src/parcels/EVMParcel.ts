@@ -1,5 +1,12 @@
 import { ethers } from "ethers";
-import type { Parcel, ParcelMode, ParcelParams, Token, Wallet } from "../types";
+import type {
+  MergeOptions,
+  Parcel,
+  ParcelMode,
+  ParcelParams,
+  SplitOptions,
+  Wallet,
+} from "../types";
 
 /* EVM Networks Configuration */
 export const NETWORKS = {
@@ -732,15 +739,9 @@ export class EVMParcel implements Parcel {
     amount,
     updateProgress,
     options = {},
-  }: {
-    wallet: Wallet;
-    addresses: string[];
-    token: Token;
-    amount: string;
-    updateProgress: () => void;
+  }: SplitOptions & {
     options?: {
       gasPrice?: bigint;
-      contractAddress?: string /* If provided, treats as token transfer */;
     };
   }): Promise<TransferResult[]> {
     if (addresses.length === 0) {
@@ -789,12 +790,7 @@ export class EVMParcel implements Parcel {
     amount,
     updateProgress,
     options = {},
-  }: {
-    senders: Wallet[];
-    receiver: string;
-    token: Token;
-    amount?: string;
-    updateProgress: () => void;
+  }: MergeOptions & {
     options?: {
       gasPrice?: bigint;
     };
