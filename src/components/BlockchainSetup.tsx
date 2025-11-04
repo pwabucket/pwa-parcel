@@ -17,6 +17,7 @@ const BlockchainSetup = ({
   setCustomToken,
   setShowCustomTokenForm,
   setConfig,
+  cancelConfigSetup,
 }: BlockchainSetupProps) => {
   return (
     <>
@@ -28,7 +29,10 @@ const BlockchainSetup = ({
 
       {/* Show Config Form */}
       {showConfigForm && ConfigForm && (
-        <ConfigFormDialog blockchain={blockchain}>
+        <ConfigFormDialog
+          blockchain={blockchain}
+          onOpenChange={cancelConfigSetup}
+        >
           <ConfigForm onSubmit={setConfig} />
         </ConfigFormDialog>
       )}

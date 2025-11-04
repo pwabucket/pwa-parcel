@@ -130,6 +130,11 @@ const useBlockchain = () => {
     navigateBack();
   };
 
+  const cancelConfigSetup = () => {
+    setConfig(null);
+    navigateBack();
+  };
+
   return {
     token,
     wallet,
@@ -156,6 +161,7 @@ const useBlockchain = () => {
     setCustomToken,
     configureWallet,
     cancelWalletSetup,
+    cancelConfigSetup,
     configureRecipients,
     configureSenders,
     configureReceiver,
