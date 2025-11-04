@@ -114,6 +114,13 @@ const MergeSendersForm = ({ setup, onSubmit }: MergeSendersFormProps) => {
         </Button>
       </div>
 
+      {/* Mode Information */}
+      <p className="text-neutral-400 text-sm text-center">
+        {mode === "single"
+          ? "Single mode selected - transactions will be processed sequentially."
+          : "Batch mode selected - transactions will be processed in parallel."}
+      </p>
+
       {/* Form */}
       <FormProvider {...form}>
         <form
