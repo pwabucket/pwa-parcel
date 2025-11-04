@@ -11,7 +11,10 @@ const schema = yup.object({
   address: yup.string().required("Token address is required"),
 });
 
-const CustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
+const CustomTokenForm = ({
+  onSubmit,
+  getTokenDetails,
+}: CustomTokenFormProps) => {
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -19,8 +22,23 @@ const CustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
     },
   });
 
-  const handleFormSubmit = (data: { address: string }) => {
+  const handleFormSubmit = async (data: { address: string }) => {
     console.log("Custom Token Address:", data.address);
+    const details = getTokenDetails
+      ? await getTokenDetails(data.address)
+      : null;
+    if (details) {
+      onSubmit({
+        id: data.address,
+        name: details.name || "Custom Token",
+        symbol: details.symbol || "",
+        decimals: details.decimals || 0,
+        address: data.address,
+        icon: details.icon || "",
+      });
+      return;
+    }
+
     onSubmit({
       id: data.address,
       name: "Custom Token",
@@ -44,6 +62,7 @@ const CustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
                 {...field}
                 id="address"
                 placeholder="Enter token address"
+                disabled={form.formState.isSubmitting}
               />
 
               <FormFieldError message={fieldState.error?.message} />
@@ -51,7 +70,9 @@ const CustomTokenForm = ({ onSubmit }: CustomTokenFormProps) => {
           )}
         />
 
-        <Button type="submit">Save Custom Token</Button>
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Submitting..." : "Save Custom Token"}
+        </Button>
       </form>
     </FormProvider>
   );

@@ -786,4 +786,4 @@ class TONParcel implements Parcel {
   }
 }
 
-export { TONParcel, TONWallet };
+export { TONParcel, TONWallet, TonApiClient };

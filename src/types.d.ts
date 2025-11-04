@@ -16,6 +16,7 @@ export interface Wallet {
 
 export interface CustomTokenFormProps {
   onSubmit: (token: Token) => void;
+  getTokenDetails?: (address: string) => Promise<Partial<Token> | null>;
 }
 
 export interface WalletFormProps {
