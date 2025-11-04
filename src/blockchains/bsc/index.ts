@@ -22,7 +22,7 @@ export const tokens: Token[] = [
 ];
 
 export class Parcel extends EVMParcel {
-  constructor(options: EVMParcelOptions = {}) {
+  constructor(options: EVMParcelOptions) {
     super({
       ...options,
       network: "bsc",
