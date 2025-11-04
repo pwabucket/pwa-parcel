@@ -23,6 +23,7 @@
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^16.0.0",
     "@vitejs/plugin-react-swc": "^4.2.0",
+    "axios": "^1.13.1",
     "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
