@@ -16,6 +16,7 @@ interface SplitterProps {
 
 const Splitter = ({ setup }: SplitterProps) => {
   const {
+    mode,
     config,
     blockchain,
     amount,
@@ -47,6 +48,7 @@ const Splitter = ({ setup }: SplitterProps) => {
       const parcelInstance = new Parcel({
         mainnet: import.meta.env.PROD,
         config,
+        mode,
       });
       return parcelInstance.split({
         wallet: setup.wallet!,
