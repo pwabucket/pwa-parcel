@@ -11,6 +11,8 @@ interface BlockchainLocationState {
   recipients?: string[];
   senders?: string[];
   wallet?: string;
+  config?: Record<string, unknown>;
+  showCustomTokenForm?: boolean;
 }
 
 const useBlockchain = () => {
@@ -19,7 +21,6 @@ const useBlockchain = () => {
   const location: Location<BlockchainLocationState> = useLocation();
 
   const [mode, setMode] = useState<"single" | "batch">("single");
-  const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [progress, setProgress] = useState<number>(0);
 
   /* Split States */
@@ -30,6 +31,8 @@ const useBlockchain = () => {
   const [senders, setSenders] = useState<Wallet[]>([]);
   const [receiver, setReceiver] = useState<string | null>(null);
 
+  const showCustomTokenForm = Boolean(location.state?.showCustomTokenForm);
+  const config: Record<string, unknown> | null = location.state?.config || null;
   const token: Token | null = location.state?.token || null;
   const amount: string | null = location.state?.amount || null;
   const blockchain = blockchains[location.state?.blockchain];
@@ -39,10 +42,11 @@ const useBlockchain = () => {
   const ConfigForm = blockchain ? blockchain.ConfigForm : null;
   const Parcel = blockchain ? blockchain.Parcel : null;
 
-  const [showCustomTokenForm, setShowCustomTokenForm] = useState(false);
   const isBlockchainSelected = Boolean(blockchain);
   const isTokenSelected = Boolean(blockchain && token);
   const isAmountSet = Boolean(isTokenSelected && amount);
+
+  /* Determine if recipients are set */
   const isRecipientsSet = Boolean(
     isAmountSet &&
       recipients.length > 0 &&
@@ -51,6 +55,7 @@ const useBlockchain = () => {
       )
   );
 
+  /* Determine if senders are set */
   const isSendersSet = Boolean(
     senders.length > 0 &&
       senders.every((sender) =>
@@ -63,13 +68,31 @@ const useBlockchain = () => {
     wallet && location.state?.wallet && wallet.address === location.state.wallet
   );
 
-  const isConfigSet = Boolean(isBlockchainSelected && (!ConfigForm || config));
-  const showConfigForm = Boolean(isBlockchainSelected && ConfigForm && !config);
+  const isConfigAvailable = Boolean(!ConfigForm || config);
+  const isConfigMissing = Boolean(ConfigForm && !config);
+  const isConfigSet = Boolean(isBlockchainSelected && isConfigAvailable);
+  const showConfigForm = Boolean(isBlockchainSelected && isConfigMissing);
 
+  /* Set Blockchain */
   const setBlockchain = (blockchainId: string) => {
     navigate(location, { state: { blockchain: blockchainId } });
   };
 
+  /* Show/Hide Custom Token Form */
+  const setShowCustomTokenForm = (show: boolean) => {
+    if (show) {
+      navigate(location, {
+        state: {
+          ...location.state,
+          showCustomTokenForm: true,
+        },
+      });
+    } else {
+      navigateBack();
+    }
+  };
+
+  /* Set Token */
   const setToken = (tokenId: string) => {
     if (tokenId === "custom") {
       setShowCustomTokenForm(true);
@@ -83,16 +106,19 @@ const useBlockchain = () => {
     });
   };
 
+  /* Set Custom Token */
   const setCustomToken = (token: Token) => {
-    setShowCustomTokenForm(false);
     navigate(location, {
       state: {
         ...location.state,
+        showCustomTokenForm: false,
         token,
       },
+      replace: true,
     });
   };
 
+  /* Set Amount */
   const setAmount = (amount: string) => {
     navigate(location, {
       state: {
@@ -102,6 +128,7 @@ const useBlockchain = () => {
     });
   };
 
+  /* Configure Recipients */
   const configureRecipients = (recipients: string[]) => {
     setRecipients(recipients);
     navigate(location, {
@@ -112,6 +139,7 @@ const useBlockchain = () => {
     });
   };
 
+  /* Configure Senders */
   const configureSenders = (senders: Wallet[]) => {
     setSenders(senders);
     navigate(location, {
@@ -122,28 +150,43 @@ const useBlockchain = () => {
     });
   };
 
+  /* Configure Receiver */
   const configureReceiver = (address: string) => {
     setReceiver(address);
   };
 
+  /* Configure Wallet */
   const configureWallet = (wallet: Wallet) => {
     setWallet(wallet);
   };
 
+  /* Cancel Wallet Setup */
   const cancelWalletSetup = () => {
     setWallet(null);
     navigateBack();
   };
 
+  /* Set Config */
+  const setConfig = (config: Record<string, unknown>) => {
+    navigate(location, {
+      state: {
+        ...location.state,
+        config,
+      },
+    });
+  };
+
+  /* Cancel Config Setup */
   const cancelConfigSetup = () => {
-    setConfig(null);
     navigateBack();
   };
 
+  /* Progress Management */
   const resetProgress = () => {
     setProgress(0);
   };
 
+  /* Update Progress */
   const updateProgress = () => {
     setProgress((prev) => prev + 1);
   };

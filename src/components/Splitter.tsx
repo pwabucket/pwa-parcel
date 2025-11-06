@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainInfo } from "./BlockchainInfo";
 import { Button } from "./Button";
 import { AddressesContainer } from "./AddressesContainer";
@@ -10,12 +9,9 @@ import { WalletFormDialog } from "./WalletFormDialog";
 import type { Wallet } from "../types";
 import { useMutation } from "@tanstack/react-query";
 import { ParcelProgress } from "./ParcelProgress";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
-interface SplitterProps {
-  setup: ReturnType<typeof useBlockchain>;
-}
-
-const Splitter = ({ setup }: SplitterProps) => {
+const Splitter = () => {
   const {
     mode,
     config,
@@ -29,7 +25,7 @@ const Splitter = ({ setup }: SplitterProps) => {
     configureWallet,
     WalletForm,
     Parcel,
-  } = setup;
+  } = useBlockChainContext();
   const [showWalletSetup, setShowWalletSetup] = useState(false);
   const amountPerRecipient =
     recipients.length > 0
@@ -59,7 +55,7 @@ const Splitter = ({ setup }: SplitterProps) => {
       });
 
       return parcelInstance.split({
-        wallet: setup.wallet!,
+        wallet: wallet!,
         addresses: recipients,
         token: token!,
         amount: amount!,

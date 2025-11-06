@@ -23,16 +23,15 @@ const Merge = () => {
     >
       <BlockchainContext.Provider value={setup}>
         {isSendersSet ? (
-          <Merger setup={setup} />
+          <Merger />
         ) : isTokenSelected ? (
           <MergeSendersForm
-            setup={setup}
             onSubmit={(data: { senders: Wallet[] }) =>
               configureSenders(data.senders)
             }
           />
         ) : (
-          <BlockchainSetup {...setup} />
+          <BlockchainSetup />
         )}
       </BlockchainContext.Provider>
     </InnerPageLayout>

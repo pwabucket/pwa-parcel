@@ -1,5 +1,4 @@
 import AppIcon from "../assets/icon.svg";
-import { useBlockchain } from "../hooks/useBlockChain";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Controller, FormProvider, useForm } from "react-hook-form";
@@ -8,18 +7,18 @@ import { Input } from "../components/Input";
 import { FormFieldError } from "../components/FormFieldError";
 import { Button } from "../components/Button";
 import { BlockchainInfo } from "./BlockchainInfo";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const schema = yup.object({
   amount: yup.string().required().label("Amount"),
 });
 
 interface SplitAmountFormProps {
-  setup: ReturnType<typeof useBlockchain>;
   onSubmit: (data: { amount: string }) => void;
 }
 
-const SplitAmountForm = ({ setup, onSubmit }: SplitAmountFormProps) => {
-  const { token, blockchain } = setup;
+const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
+  const { token, blockchain } = useBlockChainContext();
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {

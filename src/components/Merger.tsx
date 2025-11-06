@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainInfo } from "./BlockchainInfo";
 import { Button } from "./Button";
 import { AddressesContainer } from "./AddressesContainer";
@@ -10,12 +9,9 @@ import { useMutation } from "@tanstack/react-query";
 import { AddressForm } from "./AddressForm";
 import { PopupDialog } from "./PopupDialog";
 import { ParcelProgress } from "./ParcelProgress";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
-interface MergerProps {
-  setup: ReturnType<typeof useBlockchain>;
-}
-
-const Merger = ({ setup }: MergerProps) => {
+const Merger = () => {
   const {
     blockchain,
     mode,
@@ -27,7 +23,7 @@ const Merger = ({ setup }: MergerProps) => {
     updateProgress,
     configureReceiver,
     Parcel,
-  } = setup;
+  } = useBlockChainContext();
   const [showReceiverSetup, setShowReceiverSetup] = useState(false);
 
   const mutation = useMutation({

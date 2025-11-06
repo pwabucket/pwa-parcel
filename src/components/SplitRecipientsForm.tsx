@@ -1,4 +1,3 @@
-import { useBlockchain } from "../hooks/useBlockChain";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import {
@@ -18,6 +17,7 @@ import { MdGroupAdd } from "react-icons/md";
 import { SplitInformation } from "./SplitInformation";
 import { SplitRecipient } from "./SplitRecipient";
 import { AddressesContainer } from "./AddressesContainer";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const schema = yup.object({
   addresses: yup
@@ -32,13 +32,12 @@ type FormData = {
 };
 
 interface SplitRecipientsFormProps {
-  setup: ReturnType<typeof useBlockchain>;
   onSubmit: (data: { addresses: string[] }) => void;
 }
 
-const SplitRecipientsForm = ({ setup, onSubmit }: SplitRecipientsFormProps) => {
+const SplitRecipientsForm = ({ onSubmit }: SplitRecipientsFormProps) => {
   const [showAddRecipientDialog, setShowAddRecipientDialog] = useState(false);
-  const { amount, token, blockchain, recipients } = setup;
+  const { amount, token, blockchain, recipients } = useBlockChainContext();
   const form = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {

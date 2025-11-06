@@ -29,19 +29,15 @@ const Split = () => {
     >
       <BlockchainContext.Provider value={setup}>
         {isRecipientsSet ? (
-          <Splitter setup={setup} />
+          <Splitter />
         ) : isAmountSet ? (
           <SplitRecipientsForm
-            setup={setup}
             onSubmit={(data) => configureRecipients(data.addresses)}
           />
         ) : isTokenSelected ? (
-          <SplitAmountForm
-            setup={setup}
-            onSubmit={(data) => setAmount(data.amount)}
-          />
+          <SplitAmountForm onSubmit={(data) => setAmount(data.amount)} />
         ) : (
-          <BlockchainSetup {...setup} />
+          <BlockchainSetup />
         )}
       </BlockchainContext.Provider>
     </InnerPageLayout>

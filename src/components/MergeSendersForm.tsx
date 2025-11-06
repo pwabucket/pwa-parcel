@@ -1,4 +1,3 @@
-import { useBlockchain } from "../hooks/useBlockChain";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import {
@@ -19,6 +18,7 @@ import { MergeInformation } from "./MergeInformation";
 import { WalletFormDialog } from "./WalletFormDialog";
 import type { Wallet } from "../types";
 import { cn } from "../lib/utils";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const schema = yup.object({
   senders: yup
@@ -43,13 +43,13 @@ type FormData = {
 };
 
 interface MergeSendersFormProps {
-  setup: ReturnType<typeof useBlockchain>;
   onSubmit: (data: { senders: Wallet[] }) => void;
 }
 
-const MergeSendersForm = ({ setup, onSubmit }: MergeSendersFormProps) => {
+const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
   const [showAddSenderDialog, setShowAddSenderDialog] = useState(false);
-  const { mode, token, blockchain, senders, WalletForm, setMode } = setup;
+  const { mode, token, blockchain, senders, WalletForm, setMode } =
+    useBlockChainContext();
   const form = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {

@@ -1,24 +1,24 @@
-import type { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainPicker } from "../components/BlockchainPicker";
 import { TokenPicker } from "../components/TokenPicker";
 import { CustomTokenDialog } from "../components/CustomTokenDialog";
 import { ConfigFormDialog } from "./ConfigFormDialog";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
-type BlockchainSetupProps = ReturnType<typeof useBlockchain>;
-const BlockchainSetup = ({
-  blockchain,
-  showConfigForm,
-  showCustomTokenForm,
-  CustomTokenForm,
-  ConfigForm,
-  isConfigSet,
-  setBlockchain,
-  setToken,
-  setCustomToken,
-  setShowCustomTokenForm,
-  setConfig,
-  cancelConfigSetup,
-}: BlockchainSetupProps) => {
+const BlockchainSetup = () => {
+  const {
+    blockchain,
+    showConfigForm,
+    showCustomTokenForm,
+    CustomTokenForm,
+    ConfigForm,
+    isConfigSet,
+    setBlockchain,
+    setToken,
+    setCustomToken,
+    setShowCustomTokenForm,
+    setConfig,
+    cancelConfigSetup,
+  } = useBlockChainContext();
   return (
     <>
       {isConfigSet ? (
