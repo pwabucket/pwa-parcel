@@ -24,6 +24,7 @@ const PopupDialog = ({
         )}
       >
         <Dialog.Content
+          onOpenAutoFocus={(e) => e.preventDefault()}
           className={cn(
             "bg-neutral-950 p-6 w-full max-w-md",
             "border border-neutral-900",
