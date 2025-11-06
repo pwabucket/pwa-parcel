@@ -173,6 +173,7 @@ const useBlockchain = () => {
         ...location.state,
         config,
       },
+      replace: true,
     });
   };
 
