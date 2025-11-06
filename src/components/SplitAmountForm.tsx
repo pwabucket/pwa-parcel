@@ -57,7 +57,13 @@ const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
                   </span>{" "}
                   to Split
                 </Label>
-                <Input {...field} placeholder="Enter amount" />
+                <Input
+                  {...field}
+                  min="0"
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="Enter amount"
+                />
                 <FormFieldError message={fieldState.error?.message} />
               </>
             )}
