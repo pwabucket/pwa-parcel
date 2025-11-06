@@ -4,8 +4,8 @@ const blockchainsIconGlob = import.meta.glob("../assets/blockchains/*.png", {
   eager: true,
   import: "default",
   query: {
-    w: 80,
-    h: 80,
+    w: 128,
+    h: 128,
     format: "webp",
   },
 }) as Record<string, string>;
@@ -14,8 +14,8 @@ const tokensIconGlob = import.meta.glob("../assets/tokens/*.png", {
   eager: true,
   import: "default",
   query: {
-    w: 80,
-    h: 80,
+    w: 64,
+    h: 64,
     format: "webp",
   },
 }) as Record<string, string>;

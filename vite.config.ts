@@ -5,6 +5,7 @@ import process from "process";
 import version from "vite-plugin-package-version";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
 import { VitePWA } from "vite-plugin-pwa";
+import { imagetools } from "vite-imagetools";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -84,6 +85,7 @@ export default defineConfig(({ mode }) => {
       }),
       ViteEjsPlugin(env),
       tailwindcss(),
+      imagetools(),
       react(),
     ],
   };
