@@ -13,7 +13,7 @@ const TokenPicker = ({ blockchain, onSelect }: TokenPickerProps) => {
   return (
     <>
       {/* Blockchain Info */}
-      <BlockchainInfo blockchain={blockchain} />
+      <BlockchainInfo />
 
       <BasePicker
         title="Select a Token"

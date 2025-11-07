@@ -48,8 +48,7 @@ interface MergeSendersFormProps {
 
 const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
   const [showAddSenderDialog, setShowAddSenderDialog] = useState(false);
-  const { mode, token, blockchain, senders, WalletForm, setMode } =
-    useBlockChainContext();
+  const { mode, token, senders, WalletForm, setMode } = useBlockChainContext();
   const form = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -81,7 +80,7 @@ const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
     <>
       <div className="flex flex-col gap-2">
         {/* Blockchain Information */}
-        <BlockchainInfo blockchain={blockchain} />
+        <BlockchainInfo />
 
         {/* Merge information */}
         <MergeInformation token={token!} totalSenders={fields.length} />
@@ -89,7 +88,6 @@ const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
 
       {/* Add Sender Dialog */}
       <WalletFormDialog
-        blockchain={blockchain}
         open={showAddSenderDialog}
         onOpenChange={setShowAddSenderDialog}
       >

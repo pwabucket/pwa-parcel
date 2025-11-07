@@ -35,7 +35,7 @@ const Splitter = () => {
   const mutation = useMutation({
     mutationKey: [
       "split",
-      blockchain.id,
+      blockchain!.id,
       wallet?.address,
       token?.address,
       amount,
@@ -84,7 +84,7 @@ const Splitter = () => {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         {/* Blockchain Information */}
-        <BlockchainInfo blockchain={blockchain} />
+        <BlockchainInfo />
 
         {/* Split information */}
         <SplitInformation
@@ -105,10 +105,7 @@ const Splitter = () => {
 
       {/* Wallet Setup Dialog */}
       {showWalletSetup && WalletForm && (
-        <WalletFormDialog
-          blockchain={blockchain}
-          onOpenChange={setShowWalletSetup}
-        >
+        <WalletFormDialog onOpenChange={setShowWalletSetup}>
           <WalletForm onSubmit={handleWalletSetupSubmit} />
         </WalletFormDialog>
       )}

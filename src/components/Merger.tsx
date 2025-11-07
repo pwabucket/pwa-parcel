@@ -27,7 +27,7 @@ const Merger = () => {
   const [showReceiverSetup, setShowReceiverSetup] = useState(false);
 
   const mutation = useMutation({
-    mutationKey: ["split", blockchain.id, token?.address],
+    mutationKey: ["split", blockchain!.id, token?.address],
     mutationFn: async () => {
       if (!Parcel) {
         throw new Error("Parcel is not defined");
@@ -70,7 +70,7 @@ const Merger = () => {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         {/* Blockchain Information */}
-        <BlockchainInfo blockchain={blockchain} />
+        <BlockchainInfo />
 
         {/* Merge information */}
         <MergeInformation token={token!} totalSenders={senders.length} />
@@ -90,8 +90,8 @@ const Merger = () => {
         <PopupDialog
           open={showReceiverSetup}
           onOpenChange={setShowReceiverSetup}
-          title={blockchain.name}
-          icon={blockchain.icon}
+          title={blockchain!.name}
+          icon={blockchain!.icon}
           description="Enter the receiver's wallet address"
         >
           <AddressForm onSubmit={handleReceiverSetup} />

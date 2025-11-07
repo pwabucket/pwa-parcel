@@ -1,23 +1,19 @@
 import { Dialog } from "radix-ui";
-import type { Blockchain } from "../types";
 import { PopupDialog } from "./PopupDialog";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 interface CustomTokenDialogProps extends Dialog.DialogProps {
-  blockchain: Blockchain;
   children: React.ReactNode;
 }
 
-const CustomTokenDialog = ({
-  children,
-  blockchain,
-  ...props
-}: CustomTokenDialogProps) => {
+const CustomTokenDialog = ({ children, ...props }: CustomTokenDialogProps) => {
+  const { blockchain } = useBlockChainContext();
   return (
     <PopupDialog
       {...props}
       open
-      title={blockchain.name || ""}
-      icon={blockchain.icon}
+      title={blockchain!.name || ""}
+      icon={blockchain!.icon}
       description="Enter the custom token details below"
     >
       {children}

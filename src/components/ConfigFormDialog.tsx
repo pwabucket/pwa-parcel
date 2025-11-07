@@ -1,23 +1,20 @@
 import { Dialog } from "radix-ui";
-import type { Blockchain } from "../types";
 import { PopupDialog } from "./PopupDialog";
+import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 interface ConfigFormDialogProps extends Dialog.DialogProps {
-  blockchain: Blockchain;
   children: React.ReactNode;
 }
 
-const ConfigFormDialog = ({
-  children,
-  blockchain,
-  ...props
-}: ConfigFormDialogProps) => {
+const ConfigFormDialog = ({ children, ...props }: ConfigFormDialogProps) => {
+  const { blockchain } = useBlockChainContext();
+
   return (
     <PopupDialog
       {...props}
       open
-      title={blockchain.name || ""}
-      icon={blockchain.icon}
+      title={blockchain!.name || ""}
+      icon={blockchain!.icon}
       description="Enter the configuration details below"
     >
       {children}

@@ -18,7 +18,7 @@ interface SplitAmountFormProps {
 }
 
 const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
-  const { token, blockchain } = useBlockChainContext();
+  const { token } = useBlockChainContext();
   const form = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -33,7 +33,7 @@ const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
 
   return (
     <>
-      <BlockchainInfo blockchain={blockchain} />
+      <BlockchainInfo />
 
       <FormProvider {...form}>
         <form

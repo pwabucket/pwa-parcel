@@ -75,7 +75,7 @@ const SplitRecipientsForm = ({ onSubmit }: SplitRecipientsFormProps) => {
     <>
       <div className="flex flex-col gap-2">
         {/* Blockchain Information */}
-        <BlockchainInfo blockchain={blockchain} />
+        <BlockchainInfo />
 
         {/* Split information */}
         <SplitInformation
@@ -89,8 +89,8 @@ const SplitRecipientsForm = ({ onSubmit }: SplitRecipientsFormProps) => {
       <PopupDialog
         open={showAddRecipientDialog}
         onOpenChange={setShowAddRecipientDialog}
-        title={blockchain.name}
-        icon={blockchain.icon}
+        title={blockchain!.name}
+        icon={blockchain!.icon}
         description="Enter the recipient's wallet address"
       >
         <AddressForm onSubmit={addRecipient} />
