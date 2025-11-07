@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useLocation, useNavigate, type Location } from "react-router";
 import { blockchains } from "../resources/blockchains";
 import type { Token, Wallet } from "../types";
 import { useNavigateBack } from "./useNavigateBack";
+import { useOpenerHandler } from "./useOpenerHandler";
 
 interface BlockchainLocationState {
-  blockchain: string;
+  blockchain?: string;
   token?: Token;
   amount?: string;
   recipients?: string[];
@@ -13,6 +14,17 @@ interface BlockchainLocationState {
   wallet?: string;
   config?: Record<string, unknown>;
   showCustomTokenForm?: boolean;
+}
+
+interface OpenerEventData {
+  blockchain: string;
+  token: string | Token;
+  amount?: string;
+  recipients?: string[];
+  senders?: Wallet[];
+  wallet?: Wallet;
+  receiver?: string;
+  config?: Record<string, unknown>;
 }
 
 const useBlockchain = () => {
@@ -35,7 +47,9 @@ const useBlockchain = () => {
   const config: Record<string, unknown> | null = location.state?.config || null;
   const token: Token | null = location.state?.token || null;
   const amount: string | null = location.state?.amount || null;
-  const blockchain = blockchains[location.state?.blockchain];
+  const blockchain = location.state?.blockchain
+    ? blockchains[location.state?.blockchain]
+    : null;
 
   const CustomTokenForm = blockchain ? blockchain.CustomTokenForm : null;
   const WalletForm = blockchain ? blockchain.WalletForm : null;
@@ -191,6 +205,75 @@ const useBlockchain = () => {
   const updateProgress = () => {
     setProgress((prev) => prev + 1);
   };
+
+  /* Opener Message Handler */
+  const handleOpenerMessage = useCallback(
+    (event: MessageEvent<OpenerEventData>) => {
+      const state: BlockchainLocationState = {};
+
+      const blockchain = blockchains[event.data.blockchain];
+      if (!blockchain) return;
+
+      /* Update Blockchain */
+      state.blockchain = event.data.blockchain;
+
+      /* Update Config */
+      if (blockchain.ConfigForm) {
+        if (event.data.config) {
+          state.config = event.data.config;
+        } else {
+          state.config = {};
+        }
+      }
+
+      /* Update Token */
+      if (typeof event.data.token !== "string") {
+        state.token = event.data.token;
+      } else {
+        const token = blockchain.tokens.find((t) => t.id === event.data.token);
+        if (!token) {
+          return;
+        } else {
+          state.token = token;
+        }
+      }
+
+      /* Update Amount */
+      if (event.data.amount) {
+        state.amount = event.data.amount;
+      }
+
+      /* Update Recipients */
+      if (event.data.recipients && Array.isArray(event.data.recipients)) {
+        state.recipients = event.data.recipients;
+        setRecipients(event.data.recipients);
+      }
+
+      /* Update Wallet */
+      if (event.data.wallet) {
+        state.wallet = event.data.wallet.address;
+        setWallet(event.data.wallet);
+      }
+
+      /* Update Senders */
+      if (event.data.senders && Array.isArray(event.data.senders)) {
+        state.senders = event.data.senders.map((s) => s.address);
+        setSenders(event.data.senders);
+      }
+
+      /* Update Receiver */
+      if (event.data.receiver) {
+        setReceiver(event.data.receiver);
+      }
+
+      /* Navigate with updated state */
+      navigate(location, { state });
+    },
+    [navigate, location]
+  );
+
+  /* Opener Handler */
+  useOpenerHandler(handleOpenerMessage);
 
   return {
     token,
