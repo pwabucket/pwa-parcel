@@ -20,6 +20,7 @@ const Merge = () => {
         </>
       }
       className="flex flex-col gap-2"
+      showBackButton={!setup.fromOpener}
     >
       <BlockchainContext.Provider value={setup}>
         {isSendersSet ? (

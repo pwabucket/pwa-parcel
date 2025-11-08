@@ -7,21 +7,25 @@ interface InnerPageLayoutProps {
   title: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  showBackButton?: boolean;
 }
 
 const InnerPageLayout = ({
   title,
   children,
   className,
+  showBackButton = true,
 }: InnerPageLayoutProps) => {
   const navigateBack = useNavigateBack();
   return (
     <div className="flex flex-col min-h-dvh">
       <AppHeader
         leftContent={
-          <AppHeader.Button onClick={() => navigateBack()}>
-            <HiOutlineArrowLeft className="size-6 text-neutral-400" />
-          </AppHeader.Button>
+          showBackButton && (
+            <AppHeader.Button onClick={() => navigateBack()}>
+              <HiOutlineArrowLeft className="size-6 text-neutral-400" />
+            </AppHeader.Button>
+          )
         }
         middleContent={
           <h1 className="text-center font-bold flex justify-center items-center gap-2">

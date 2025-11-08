@@ -32,6 +32,9 @@ const useBlockchain = () => {
   const navigate = useNavigate();
   const location: Location<BlockchainLocationState> = useLocation();
 
+  /* State to track if opened from external opener */
+  const [fromOpener, setFromOpener] = useState<boolean>(false);
+
   const [mode, setMode] = useState<"single" | "batch">("single");
   const [progress, setProgress] = useState<number>(0);
 
@@ -266,6 +269,9 @@ const useBlockchain = () => {
         setReceiver(event.data.receiver);
       }
 
+      /* Mark as from opener */
+      setFromOpener(true);
+
       /* Navigate with updated state */
       navigate(location, { state });
     },
@@ -291,6 +297,7 @@ const useBlockchain = () => {
     showConfigForm,
     showCustomTokenForm,
     isWalletConfigured,
+    fromOpener,
 
     /* Progress Management */
     progress,
