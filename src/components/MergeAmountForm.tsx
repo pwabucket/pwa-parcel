@@ -10,14 +10,14 @@ import { BlockchainInfo } from "./BlockchainInfo";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const schema = yup.object({
-  amount: yup.string().required().label("Amount"),
+  amount: yup.string().label("Amount"),
 });
 
-interface SplitAmountFormProps {
-  onSubmit: (data: { amount: string }) => void;
+interface MergeAmountFormProps {
+  onSubmit: (data: { amount?: string }) => void;
 }
 
-const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
+const MergeAmountForm = ({ onSubmit }: MergeAmountFormProps) => {
   const { token } = useBlockChainContext();
   const form = useForm({
     resolver: yupResolver(schema),
@@ -26,8 +26,8 @@ const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
     },
   });
 
-  const handleFormSubmit = (data: { amount: string }) => {
-    console.log("Split Amount:", data.amount);
+  const handleFormSubmit = (data: { amount?: string }) => {
+    console.log("Merge Amount:", data.amount);
     onSubmit({ amount: data.amount });
   };
 
@@ -51,18 +51,21 @@ const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
                     alt="Token Icon"
                     className="inline-block size-4 rounded-full mr-2"
                   />
-                  Total amount of{" "}
+                  Amount of{" "}
                   <span className="font-bold">
                     ({token!.symbol || "CUSTOM-TOKEN"})
                   </span>{" "}
-                  to Split
+                  to merge from each wallet
                 </Label>
                 <Input
                   {...field}
                   type="number"
                   inputMode="decimal"
-                  placeholder="Enter amount"
+                  placeholder="Enter amount (Optional)"
                 />
+                <p className="text-center text-sm text-neutral-400">
+                  Leave this blank to merge all available tokens
+                </p>
                 <FormFieldError message={fieldState.error?.message} />
               </>
             )}
@@ -75,4 +78,4 @@ const SplitAmountForm = ({ onSubmit }: SplitAmountFormProps) => {
   );
 };
 
-export { SplitAmountForm };
+export { MergeAmountForm };

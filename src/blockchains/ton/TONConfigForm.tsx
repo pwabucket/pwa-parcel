@@ -41,8 +41,12 @@ const TONConfigForm = ({ onSubmit }: TONConfigFormProps) => {
           control={form.control}
           render={({ field, fieldState }) => (
             <>
-              <Label htmlFor="apiKey">API Key (Optional)</Label>
-              <Input {...field} id="apiKey" placeholder="Enter API key" />
+              <Label htmlFor="apiKey">API Key</Label>
+              <Input
+                {...field}
+                id="apiKey"
+                placeholder="Enter API key (Optional)"
+              />
               <p className="text-sm text-neutral-400">
                 You can get your API key from{" "}
                 <Link

@@ -49,7 +49,7 @@ const useBlockchain = () => {
   const showCustomTokenForm = Boolean(location.state?.showCustomTokenForm);
   const config: Record<string, unknown> | null = location.state?.config || null;
   const token: Token | null = location.state?.token || null;
-  const amount: string | null = location.state?.amount || null;
+  const amount: string | null = location.state?.amount ?? null;
   const blockchain = location.state?.blockchain
     ? blockchains[location.state?.blockchain]
     : null;
@@ -61,11 +61,16 @@ const useBlockchain = () => {
 
   const isBlockchainSelected = Boolean(blockchain);
   const isTokenSelected = Boolean(blockchain && token);
-  const isAmountSet = Boolean(isTokenSelected && amount);
+  const isSplitAmountSet = Boolean(
+    isTokenSelected && amount && parseFloat(amount) > 0
+  );
+  const isMergeAmountSet = Boolean(
+    isTokenSelected && typeof amount === "string"
+  );
 
   /* Determine if recipients are set */
   const isRecipientsSet = Boolean(
-    isAmountSet &&
+    isSplitAmountSet &&
       recipients.length > 0 &&
       recipients.every((addr: string) =>
         location.state?.recipients?.includes(addr)
@@ -289,7 +294,7 @@ const useBlockchain = () => {
     receiver,
     senders,
     recipients,
-    isAmountSet,
+    isSplitAmountSet,
     isTokenSelected,
     isRecipientsSet,
     isSendersSet,
@@ -326,6 +331,7 @@ const useBlockchain = () => {
     setMode,
     setConfig,
     isConfigSet,
+    isMergeAmountSet,
   };
 };
 

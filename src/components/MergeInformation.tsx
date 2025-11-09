@@ -3,14 +3,22 @@ import type { Token } from "../types";
 
 /** Props for Merge Information */
 interface MergeInformationProps {
+  amount?: string;
   token?: Token;
   totalSenders: number;
 }
 
 /** Merge Information Component */
-const MergeInformation = ({ token, totalSenders }: MergeInformationProps) => (
+const MergeInformation = ({
+  token,
+  amount,
+  totalSenders,
+}: MergeInformationProps) => (
   <p className="text-sm px-4 text-center">
     Merge{" "}
+    <span className="font-bold text-lime-300">
+      {amount ? `${amount}` : "all available"}
+    </span>{" "}
     <span className="font-bold">
       <img
         src={token?.icon || AppIcon}

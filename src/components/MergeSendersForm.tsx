@@ -48,7 +48,8 @@ interface MergeSendersFormProps {
 
 const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
   const [showAddSenderDialog, setShowAddSenderDialog] = useState(false);
-  const { mode, token, senders, WalletForm, setMode } = useBlockChainContext();
+  const { mode, token, amount, senders, WalletForm, setMode } =
+    useBlockChainContext();
   const form = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -83,7 +84,11 @@ const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
         <BlockchainInfo />
 
         {/* Merge information */}
-        <MergeInformation token={token!} totalSenders={fields.length} />
+        <MergeInformation
+          token={token!}
+          amount={amount || ""}
+          totalSenders={fields.length}
+        />
       </div>
 
       {/* Add Sender Dialog */}
@@ -113,9 +118,9 @@ const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
       </div>
 
       {/* Mode Information */}
-      <p className="text-neutral-400 text-sm text-center">
+      <p className="text-purple-300 text-sm text-center">
         {mode === "single"
-          ? "Single mode selected - transactions will be processed sequentially."
+          ? "Single mode selected - transactions will be processed sequentially. (Recommended for most users)"
           : "Batch mode selected - transactions will be processed in parallel."}
       </p>
 

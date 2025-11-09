@@ -10,7 +10,7 @@ import { BlockchainContext } from "../contexts/BlockchainContext";
 const Split = () => {
   const setup = useBlockchain();
   const {
-    isAmountSet,
+    isSplitAmountSet,
     isTokenSelected,
     isRecipientsSet,
     setAmount,
@@ -31,7 +31,7 @@ const Split = () => {
       <BlockchainContext.Provider value={setup}>
         {isRecipientsSet ? (
           <Splitter />
-        ) : isAmountSet ? (
+        ) : isSplitAmountSet ? (
           <SplitRecipientsForm
             onSubmit={(data) => configureRecipients(data.addresses)}
           />

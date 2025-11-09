@@ -6,10 +6,17 @@ import { MergeSendersForm } from "../components/MergeSendersForm";
 import { Merger } from "../components/Merger";
 import { AiOutlineMerge } from "react-icons/ai";
 import { BlockchainContext } from "../contexts/BlockchainContext";
+import { MergeAmountForm } from "../components/MergeAmountForm";
 
 const Merge = () => {
   const setup = useBlockchain();
-  const { isTokenSelected, isSendersSet, configureSenders } = setup;
+  const {
+    isTokenSelected,
+    isMergeAmountSet,
+    isSendersSet,
+    configureSenders,
+    setAmount,
+  } = setup;
 
   return (
     <InnerPageLayout
@@ -25,12 +32,14 @@ const Merge = () => {
       <BlockchainContext.Provider value={setup}>
         {isSendersSet ? (
           <Merger />
-        ) : isTokenSelected ? (
+        ) : isMergeAmountSet ? (
           <MergeSendersForm
             onSubmit={(data: { senders: Wallet[] }) =>
               configureSenders(data.senders)
             }
           />
+        ) : isTokenSelected ? (
+          <MergeAmountForm onSubmit={(data) => setAmount(data.amount || "")} />
         ) : (
           <BlockchainSetup />
         )}

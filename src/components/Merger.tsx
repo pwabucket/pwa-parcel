@@ -14,6 +14,7 @@ import { useBlockChainContext } from "../hooks/useBlockchainContext";
 const Merger = () => {
   const {
     blockchain,
+    amount,
     mode,
     config,
     receiver,
@@ -45,6 +46,7 @@ const Merger = () => {
         senders,
         receiver: receiver!,
         token: token!,
+        amount: amount || "",
         updateProgress,
       });
     },
@@ -73,7 +75,11 @@ const Merger = () => {
         <BlockchainInfo />
 
         {/* Merge information */}
-        <MergeInformation token={token!} totalSenders={senders.length} />
+        <MergeInformation
+          amount={amount || ""}
+          token={token!}
+          totalSenders={senders.length}
+        />
 
         {receiver && (
           <p className="text-lime-500 break-all font-bold font-mono text-center text-sm">
