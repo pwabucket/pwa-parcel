@@ -25,6 +25,7 @@ export interface WalletFormProps {
 
 export interface Blockchain {
   id: string;
+  group: string | null;
   icon: string;
   name: string;
   tokens: Token[];

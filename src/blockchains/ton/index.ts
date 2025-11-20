@@ -1,6 +1,7 @@
 import type { Token } from "../../types";
 
 export const id = "ton";
+export const group = "ton";
 export const name = "The Open Network";
 export const tokens: Token[] = [
   {

@@ -9,6 +9,8 @@ interface BlockchainLocationState {
   blockchain?: string;
   token?: Token;
   amount?: string;
+  group?: string;
+  receiver?: string;
   recipients?: string[];
   senders?: string[];
   wallet?: string;
@@ -20,6 +22,7 @@ interface OpenerEventData {
   blockchain: string;
   token: string | Token;
   amount?: string;
+  group?: string;
   recipients?: string[];
   senders?: Wallet[];
   wallet?: Wallet;
@@ -48,6 +51,7 @@ const useBlockchain = () => {
 
   const showCustomTokenForm = Boolean(location.state?.showCustomTokenForm);
   const config: Record<string, unknown> | null = location.state?.config || null;
+  const group: string | null = location.state?.group ?? null;
   const token: Token | null = location.state?.token || null;
   const amount: string | null = location.state?.amount ?? null;
   const blockchain = location.state?.blockchain
@@ -218,19 +222,24 @@ const useBlockchain = () => {
   const handleOpenerMessage = useCallback(
     (event: MessageEvent<OpenerEventData>) => {
       const state: BlockchainLocationState = {};
-
       const blockchain = blockchains[event.data.blockchain];
-      if (!blockchain) return;
 
-      /* Update Blockchain */
-      state.blockchain = event.data.blockchain;
+      /* Update Blockchain Group */
+      if (event.data.group) {
+        state.group = event.data.group;
+      }
 
-      /* Update Config */
-      if (blockchain.ConfigForm) {
-        if (event.data.config) {
-          state.config = event.data.config;
-        } else {
-          state.config = {};
+      if (blockchain) {
+        /* Update Blockchain */
+        state.blockchain = event.data.blockchain;
+
+        /* Update Config */
+        if (blockchain.ConfigForm) {
+          if (event.data.config) {
+            state.config = event.data.config;
+          } else {
+            state.config = {};
+          }
         }
       }
 
@@ -239,9 +248,7 @@ const useBlockchain = () => {
         state.token = event.data.token;
       } else {
         const token = blockchain.tokens.find((t) => t.id === event.data.token);
-        if (!token) {
-          return;
-        } else {
+        if (token) {
           state.token = token;
         }
       }
@@ -289,6 +296,7 @@ const useBlockchain = () => {
   return {
     token,
     blockchain,
+    group,
     amount,
     wallet,
     receiver,

@@ -6,6 +6,7 @@ import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const BlockchainSetup = () => {
   const {
+    group,
     blockchain,
     showConfigForm,
     showCustomTokenForm,
@@ -24,7 +25,7 @@ const BlockchainSetup = () => {
       {isConfigSet ? (
         <TokenPicker blockchain={blockchain!} onSelect={setToken} />
       ) : (
-        <BlockchainPicker onSelect={setBlockchain} />
+        <BlockchainPicker group={group} onSelect={setBlockchain} />
       )}
 
       {/* Show Config Form */}

@@ -3,10 +3,11 @@ import { BasePicker } from "./BasePicker";
 import { BlockchainInfo } from "./BlockchainInfo";
 
 interface BlockchainPickerProps {
+  group: string | null;
   onSelect?: (blockchainId: string) => void;
 }
 
-const BlockchainPicker = ({ onSelect }: BlockchainPickerProps) => {
+const BlockchainPicker = ({ group, onSelect }: BlockchainPickerProps) => {
   return (
     <>
       {/* Blockchain Info */}
@@ -14,11 +15,13 @@ const BlockchainPicker = ({ onSelect }: BlockchainPickerProps) => {
 
       <BasePicker
         title="Select a Blockchain"
-        items={Object.values(blockchains).map((blockchain) => ({
-          id: blockchain.id,
-          name: blockchain.name,
-          icon: blockchain.icon,
-        }))}
+        items={Object.values(blockchains)
+          .filter((blockchain) => !group || blockchain.group === group)
+          .map((blockchain) => ({
+            id: blockchain.id,
+            name: blockchain.name,
+            icon: blockchain.icon,
+          }))}
         onSelect={onSelect}
       />
     </>
