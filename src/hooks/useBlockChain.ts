@@ -34,6 +34,7 @@ const useBlockchain = () => {
   const navigateBack = useNavigateBack();
   const navigate = useNavigate();
   const location: Location<BlockchainLocationState> = useLocation();
+  const [allowBackNavigation] = useState<boolean>(location.key !== "default");
 
   /* State to track if opened from external opener */
   const [fromOpener, setFromOpener] = useState<boolean>(false);
@@ -83,7 +84,8 @@ const useBlockchain = () => {
 
   /* Determine if senders are set */
   const isSendersSet = Boolean(
-    senders.length > 0 &&
+    isMergeAmountSet &&
+      senders.length > 0 &&
       senders.every((sender) =>
         location.state?.senders?.includes(sender.address)
       )
@@ -221,14 +223,18 @@ const useBlockchain = () => {
   /* Opener Message Handler */
   const handleOpenerMessage = useCallback(
     (event: MessageEvent<OpenerEventData>) => {
+      if (fromOpener) {
+        return;
+      }
+
       const state: BlockchainLocationState = {};
-      const blockchain = blockchains[event.data.blockchain];
 
       /* Update Blockchain Group */
       if (event.data.group) {
         state.group = event.data.group;
       }
 
+      const blockchain = blockchains[event.data.blockchain];
       if (blockchain) {
         /* Update Blockchain */
         state.blockchain = event.data.blockchain;
@@ -285,9 +291,9 @@ const useBlockchain = () => {
       setFromOpener(true);
 
       /* Navigate with updated state */
-      navigate(location, { state });
+      navigate(location, { state, replace: true });
     },
-    [navigate, location]
+    [navigate, location, fromOpener]
   );
 
   /* Opener Handler */
@@ -310,6 +316,7 @@ const useBlockchain = () => {
     showConfigForm,
     showCustomTokenForm,
     isWalletConfigured,
+    allowBackNavigation,
     fromOpener,
 
     /* Progress Management */
