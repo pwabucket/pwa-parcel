@@ -21,6 +21,8 @@ import type {
   MergeOptions,
   SplitOptions,
 } from "../types";
+import { calculateAmountPerRecipient } from "../lib/utils";
+import Decimal from "decimal.js";
 
 /* Simple HTTP client for TON API */
 class TonApiClient {
@@ -431,7 +433,9 @@ class TONWallet {
 
       /* Convert balance using correct decimals */
       const divisor = BigInt(10 ** jettonDecimals);
-      const balanceNumber = Number(balance) / Number(divisor);
+      const balanceNumber = new Decimal(balance).dividedBy(
+        new Decimal(divisor)
+      );
 
       return balanceNumber.toString();
     } catch {
@@ -465,16 +469,18 @@ class TONWallet {
     /* Convert amount using correct decimals */
     const multiplier = BigInt(10 ** jettonDecimals);
     const requiredAmount = BigInt(
-      Math.floor(parseFloat(jettonAmount) * Number(multiplier))
+      Decimal.floor(
+        new Decimal(jettonAmount).times(new Decimal(multiplier))
+      ).toString()
     );
 
     /* Check if wallet has jetton balance */
     const jettonBalance = await jettonWallet.getBalance();
 
     if (jettonBalance < requiredAmount) {
-      const currentBalanceFormatted = (
-        Number(jettonBalance) / Number(multiplier)
-      ).toString();
+      const currentBalanceFormatted = new Decimal(jettonBalance)
+        .dividedBy(new Decimal(multiplier))
+        .toString();
       throw new Error(
         `Insufficient jetton balance. Required: ${jettonAmount}, Available: ${currentBalanceFormatted}`
       );
@@ -609,7 +615,10 @@ class TONParcel implements Parcel {
     amount,
     updateProgress,
   }: SplitOptions): Promise<TransactionResult[]> {
-    const perAddressAmount = (parseFloat(amount) / addresses.length).toFixed(9);
+    const perAddressAmount = calculateAmountPerRecipient(
+      amount,
+      addresses.length
+    );
 
     /* Extract mnemonic from wallet (could be in mnemonic or privateKey field) */
     const seedPhrase = wallet.mnemonic || wallet.privateKey;

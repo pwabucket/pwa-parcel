@@ -18,6 +18,7 @@ import { SplitInformation } from "./SplitInformation";
 import { SplitRecipient } from "./SplitRecipient";
 import { AddressesContainer } from "./AddressesContainer";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
+import { calculateAmountPerRecipient } from "../lib/utils";
 
 const schema = yup.object({
   addresses: yup
@@ -52,10 +53,10 @@ const SplitRecipientsForm = ({ onSubmit }: SplitRecipientsFormProps) => {
   });
 
   /* Calculate amount per recipient */
-  const amountPerRecipient =
-    fields.length > 0
-      ? (parseFloat(amount || "0") / fields.length).toFixed(8)
-      : "0";
+  const amountPerRecipient = calculateAmountPerRecipient(
+    amount || "0",
+    fields.length
+  );
 
   /* Form Submission */
   const handleFormSubmit = (data: { addresses: string[] }) => {

@@ -10,6 +10,7 @@ import type { Wallet } from "../types";
 import { useMutation } from "@tanstack/react-query";
 import { ParcelProgress } from "./ParcelProgress";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
+import { calculateAmountPerRecipient } from "../lib/utils";
 
 const Splitter = () => {
   const {
@@ -27,10 +28,10 @@ const Splitter = () => {
     Parcel,
   } = useBlockChainContext();
   const [showWalletSetup, setShowWalletSetup] = useState(false);
-  const amountPerRecipient =
-    recipients.length > 0
-      ? (parseFloat(amount || "0") / recipients.length).toFixed(8)
-      : "0";
+  const amountPerRecipient = calculateAmountPerRecipient(
+    amount || "0",
+    recipients.length
+  );
 
   const mutation = useMutation({
     mutationKey: [

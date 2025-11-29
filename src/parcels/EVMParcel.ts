@@ -7,6 +7,7 @@ import type {
   SplitOptions,
   Wallet,
 } from "../types";
+import { calculateAmountPerRecipient } from "../lib/utils";
 
 /* EVM Networks Configuration */
 export const NETWORKS = {
@@ -753,9 +754,10 @@ export class EVMParcel implements Parcel {
     const walletInstance = this.createWallet(wallet.privateKey!);
     await walletInstance.initializeNonce(); /* Initialize nonce tracking */
 
-    const perAddressAmount = token.address
-      ? (parseFloat(amount) / addresses.length).toString()
-      : (parseFloat(amount) / addresses.length).toFixed(18);
+    const perAddressAmount = calculateAmountPerRecipient(
+      amount,
+      addresses.length
+    );
 
     const results: TransferResult[] = [];
 
