@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useLocation, useNavigate, type Location } from "react-router";
 import { blockchains } from "../resources/blockchains";
 import type { Token, Wallet } from "../types";
-import { useNavigateBack } from "./useNavigateBack";
+import { useNavigateBack } from "@pwabucket/pwa-router";
 import { useOpenerHandler } from "./useOpenerHandler";
 
 interface BlockchainLocationState {
