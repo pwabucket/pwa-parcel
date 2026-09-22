@@ -8,13 +8,13 @@ import { SiGithub } from "react-icons/si";
 const Home = () => {
   return (
     <div className="flex flex-col min-h-dvh w-full items-center justify-center py-10">
-      <Container className="flex flex-col gap-4">
+      <Container className="flex flex-col gap-4 max-md:px-10">
         <div className="flex flex-col gap-2 justify-center items-center">
           <img src={AppIcon} alt="App Icon" className="size-28 mx-auto" />
           <h1 className="text-5xl text-center font-display text-purple-300">
             Parcel
           </h1>
-          <p className="text-center font-mono text-green-300">
+          <p className="text-center font-mono font-bold text-sm text-green-300">
             Token Splitter / Merger
           </p>
         </div>
