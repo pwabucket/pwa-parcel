@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import { BrowserRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { registerSW } from "virtual:pwa-register";
+import { PWARoutingProvider } from "@pwabucket/pwa-router";
 
 /** Register Service Worker */
 registerSW({ immediate: true });
@@ -15,8 +16,10 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <PWARoutingProvider>
+          <App />
+        </PWARoutingProvider>
       </BrowserRouter>
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );

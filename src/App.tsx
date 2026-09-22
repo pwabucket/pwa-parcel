@@ -4,8 +4,11 @@ import { Split } from "./pages/Split";
 import { Merge } from "./pages/Merge";
 import { useIsMutating } from "@tanstack/react-query";
 import { useWakeLock } from "./hooks/useWakeLock";
+import { usePWARouting } from "@pwabucket/pwa-router";
 
 function App() {
+  const { resolvedLocation } = usePWARouting();
+
   /* Track Ongoing Mutations */
   const isMutating = useIsMutating();
 
@@ -14,7 +17,7 @@ function App() {
 
   return (
     <>
-      <Routes>
+      <Routes location={resolvedLocation}>
         <Route index element={<Home />} />
         <Route path="split" element={<Split />} />
         <Route path="merge" element={<Merge />} />
