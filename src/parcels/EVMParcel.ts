@@ -9,6 +9,7 @@ import type {
   Wallet,
 } from "../types";
 import { calculateAmountPerRecipient } from "../lib/utils";
+import Decimal from "decimal.js";
 
 /* EVM Networks Configuration */
 export const NETWORKS = {
@@ -78,7 +79,44 @@ const ERC20_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
 ];
+
+/* Disperse contract - sends to many recipients in a single transaction */
+const DISPERSE_ADDRESS = "0xD152f549545093347A162Dce210e7293f1452150";
+const DISPERSE_ABI = [
+  "function disperseEther(address[] recipients, uint256[] values) payable",
+  "function disperseToken(address token, address[] recipients, uint256[] values)",
+];
+const DISPERSE_BATCH_SIZE = 200; /* Keeps each transaction well under block gas limits */
+
+/* Fallback gas estimates for Disperse (used when estimation would revert) */
+const DISPERSE_BASE_GAS = 50_000n;
+const DISPERSE_GAS_PER_RECIPIENT = 35_000n; /* Includes new account / holder costs */
+const APPROVE_GAS = 50_000n;
+
+/* Split an array into chunks */
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/* Add a 20% safety buffer to a gas limit */
+function withGasBuffer(gas: bigint): bigint {
+  return gas + (gas * 20n) / 100n;
+}
+
+/* Convert an amount to base units, truncating extra decimals */
+function toBaseUnits(amount: string, decimals: number): bigint {
+  return ethers.parseUnits(
+    new Decimal(amount).toDecimalPlaces(decimals, Decimal.ROUND_DOWN).toFixed(),
+    decimals
+  );
+}
 
 export interface TransferResult {
   status: boolean;
@@ -151,6 +189,7 @@ export class EVMWallet {
   private rpcUrl: string;
   private currentNonce: number | null =
     null; /* Track nonce for split operations */
+  private disperseAvailable: boolean | null = null;
 
   constructor({
     privateKey,
@@ -562,128 +601,212 @@ export class EVMWallet {
     return this.currentNonce++;
   }
 
-  /* Optimized transfer for split operations - uses tracked nonce */
-  async splitTransferNative(
-    recipientAddress: string,
-    amount: string,
-    gasPrice?: bigint
-  ): Promise<TransferResult> {
-    try {
-      await this.initializeNetwork();
-
-      const value = ethers.parseEther(amount);
-      const nonce = this.getNextNonce();
-
-      /* Use provided gas price or fetch from network */
-      const finalGasPrice = gasPrice || (await this.getOptimizedGasPrice());
-
-      /* Estimate gas limit for this specific transaction */
-      const gasLimit = await this.estimateGasWithBuffer(
-        "native",
-        undefined,
-        recipientAddress,
-        amount
-      );
-
-      const tx = {
-        to: recipientAddress,
-        value,
-        gasLimit,
-        gasPrice: finalGasPrice,
-        chainId: this.chainId!,
-        nonce,
-      };
-
-      const signedTx = await this.wallet.signTransaction(tx);
-      const broadcast = await this.provider.broadcastTransaction(signedTx);
-      const receipt = await broadcast.wait();
-
-      return {
-        status: true,
-        txHash: receipt!.hash,
-        from: await this.wallet.getAddress(),
-        to: recipientAddress,
-        amount,
-        gasUsed: receipt!.gasUsed,
-        gasPrice: receipt!.gasPrice,
-      };
-    } catch (error) {
-      return {
-        status: false,
-        txHash: "",
-        from: await this.wallet.getAddress(),
-        to: recipientAddress,
-        amount,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+  /* Check if the Disperse contract is deployed on this network */
+  async isDisperseAvailable(): Promise<boolean> {
+    if (this.disperseAvailable === null) {
+      try {
+        const code = await this.provider.getCode(DISPERSE_ADDRESS);
+        this.disperseAvailable = code !== "0x";
+      } catch {
+        this.disperseAvailable = false;
+      }
     }
+    return this.disperseAvailable;
   }
 
-  /* Optimized transfer for split operations - uses tracked nonce */
-  async splitTransferToken(
-    tokenAddress: string,
+  async getTokenDecimals(tokenAddress: string): Promise<number> {
+    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
+    return Number(await contract.decimals());
+  }
+
+  /* Estimate gas, sign with the tracked nonce and broadcast */
+  private async signAndBroadcast(
+    tx: ethers.TransactionRequest,
+    gasPrice: bigint
+  ) {
+    await this.initializeNetwork();
+
+    /* Estimate before taking a nonce so a failed estimate leaves no gap */
+    const gasLimit = withGasBuffer(await this.wallet.estimateGas(tx));
+
+    const signedTx = await this.wallet.signTransaction({
+      ...tx,
+      gasLimit,
+      gasPrice,
+      chainId: this.chainId!,
+      nonce: this.getNextNonce(),
+    });
+
+    return this.provider.broadcastTransaction(signedTx);
+  }
+
+  /* Broadcast a single transfer without waiting for confirmation */
+  async broadcastTransfer(
     recipientAddress: string,
-    amount: string,
-    gasPrice?: bigint
-  ): Promise<TransferResult> {
-    try {
-      await this.initializeNetwork();
+    value: bigint,
+    gasPrice: bigint,
+    tokenAddress?: string
+  ) {
+    const tx = tokenAddress
+      ? await new ethers.Contract(
+          tokenAddress,
+          ERC20_ABI,
+          this.wallet
+        ).transfer.populateTransaction(recipientAddress, value)
+      : { to: recipientAddress, value };
 
-      const contract = new ethers.Contract(
-        tokenAddress,
-        ERC20_ABI,
-        this.wallet
+    return this.signAndBroadcast(tx, gasPrice);
+  }
+
+  /* Approve exactly `total` for Disperse if the current allowance is too low */
+  private async ensureDisperseAllowance(
+    tokenAddress: string,
+    total: bigint,
+    gasPrice: bigint
+  ) {
+    const token = new ethers.Contract(tokenAddress, ERC20_ABI, this.wallet);
+    const allowance: bigint = await token.allowance(
+      this.wallet.address,
+      DISPERSE_ADDRESS
+    );
+
+    if (allowance >= total) return;
+
+    /* Some tokens (e.g USDT) reject changing a non-zero allowance */
+    if (allowance > 0n) {
+      const reset = await this.signAndBroadcast(
+        await token.approve.populateTransaction(DISPERSE_ADDRESS, 0n),
+        gasPrice
       );
-      const decimals = await contract.decimals();
-      const value = ethers.parseUnits(amount, decimals);
-      const nonce = this.getNextNonce();
-
-      /* Use provided gas price or fetch from network */
-      const finalGasPrice = gasPrice || (await this.getOptimizedGasPrice());
-
-      /* Estimate gas limit for this specific token transfer */
-      const gasLimit = await this.estimateGasWithBuffer(
-        "token",
-        tokenAddress,
-        recipientAddress,
-        amount
-      );
-
-      const tx = await contract.transfer.populateTransaction(
-        recipientAddress,
-        value
-      );
-      const fullTx = {
-        ...tx,
-        gasLimit,
-        gasPrice: finalGasPrice,
-        chainId: this.chainId!,
-        nonce,
-      };
-
-      const signedTx = await this.wallet.signTransaction(fullTx);
-      const broadcast = await this.provider.broadcastTransaction(signedTx);
-      const receipt = await broadcast.wait();
-
-      return {
-        status: true,
-        txHash: receipt!.hash,
-        from: await this.wallet.getAddress(),
-        to: recipientAddress,
-        amount,
-        gasUsed: receipt!.gasUsed,
-        gasPrice: receipt!.gasPrice,
-      };
-    } catch (error) {
-      return {
-        status: false,
-        txHash: "",
-        from: await this.wallet.getAddress(),
-        to: recipientAddress,
-        amount,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      await reset.wait();
     }
+
+    const approval = await this.signAndBroadcast(
+      await token.approve.populateTransaction(DISPERSE_ADDRESS, total),
+      gasPrice
+    );
+    await approval.wait();
+  }
+
+  /* Send native currency to multiple recipients in a single transaction */
+  async disperseNative(
+    recipients: string[],
+    values: bigint[],
+    gasPrice: bigint
+  ): Promise<string> {
+    const disperse = new ethers.Contract(
+      DISPERSE_ADDRESS,
+      DISPERSE_ABI,
+      this.wallet
+    );
+    const total = values.reduce((sum, value) => sum + value, 0n);
+
+    const broadcast = await this.signAndBroadcast(
+      await disperse.disperseEther.populateTransaction(recipients, values, {
+        value: total,
+      }),
+      gasPrice
+    );
+    const receipt = await broadcast.wait();
+
+    return receipt!.hash;
+  }
+
+  /* Send tokens to multiple recipients in a single transaction */
+  async disperseToken(
+    tokenAddress: string,
+    recipients: string[],
+    values: bigint[],
+    gasPrice: bigint
+  ): Promise<string> {
+    const disperse = new ethers.Contract(
+      DISPERSE_ADDRESS,
+      DISPERSE_ABI,
+      this.wallet
+    );
+    const total = values.reduce((sum, value) => sum + value, 0n);
+
+    await this.ensureDisperseAllowance(tokenAddress, total, gasPrice);
+
+    const broadcast = await this.signAndBroadcast(
+      await disperse.disperseToken.populateTransaction(
+        tokenAddress,
+        recipients,
+        values
+      ),
+      gasPrice
+    );
+    const receipt = await broadcast.wait();
+
+    return receipt!.hash;
+  }
+
+  /* Estimate total gas for dispersing `value` to each recipient */
+  async estimateDisperseGas(
+    recipients: string[],
+    value: bigint,
+    tokenAddress?: string
+  ): Promise<{ gas: bigint; transactions: number; approximate: boolean }> {
+    const chunks = chunk(recipients, DISPERSE_BATCH_SIZE);
+    const fallbackGas = (count: number) =>
+      DISPERSE_BASE_GAS + DISPERSE_GAS_PER_RECIPIENT * BigInt(count);
+
+    if (tokenAddress) {
+      const token = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
+      const total = value * BigInt(recipients.length);
+      const allowance: bigint = await token.allowance(
+        this.wallet.address,
+        DISPERSE_ADDRESS
+      );
+
+      /* disperseToken reverts without allowance, so it can't be simulated yet */
+      if (allowance < total) {
+        const approvals = allowance > 0n ? 2 : 1;
+        const gas =
+          APPROVE_GAS * BigInt(approvals) +
+          chunks.reduce((sum, c) => sum + fallbackGas(c.length), 0n);
+
+        return {
+          gas: withGasBuffer(gas),
+          transactions: chunks.length + approvals,
+          approximate: true,
+        };
+      }
+    }
+
+    const disperse = new ethers.Contract(
+      DISPERSE_ADDRESS,
+      DISPERSE_ABI,
+      this.wallet
+    );
+
+    let gas = 0n;
+    let approximate = false;
+
+    for (const recipientsChunk of chunks) {
+      const values = recipientsChunk.map(() => value);
+      try {
+        gas += withGasBuffer(
+          tokenAddress
+            ? await disperse.disperseToken.estimateGas(
+                tokenAddress,
+                recipientsChunk,
+                values
+              )
+            : await disperse.disperseEther.estimateGas(
+                recipientsChunk,
+                values,
+                { value: value * BigInt(recipientsChunk.length) }
+              )
+        );
+      } catch {
+        /* e.g insufficient balance - fall back to a rough estimate */
+        gas += withGasBuffer(fallbackGas(recipientsChunk.length));
+        approximate = true;
+      }
+    }
+
+    return { gas, transactions: chunks.length, approximate };
   }
 }
 
@@ -775,34 +898,115 @@ export class EVMParcel implements Parcel {
     const walletInstance = this.createWallet(wallet.privateKey!);
     await walletInstance.initializeNonce(); /* Initialize nonce tracking */
 
+    const from = await walletInstance.getAddress();
     const perAddressAmount = calculateAmountPerRecipient(
       amount,
       addresses.length
     );
 
+    /* Fetch once for the whole split */
+    const gasPrice =
+      options?.gasPrice || (await walletInstance.getOptimizedGasPrice());
+    const value = toBaseUnits(
+      perAddressAmount,
+      token.address ? await walletInstance.getTokenDecimals(token.address) : 18
+    );
+
+    const failed = (address: string, error: unknown): TransferResult => ({
+      status: false,
+      txHash: "",
+      from,
+      to: address,
+      amount: perAddressAmount,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
     const results: TransferResult[] = [];
 
-    for (const address of addresses) {
-      let result: TransferResult;
-      if (token.address) {
-        result = await walletInstance.splitTransferToken(
-          token.address,
-          address,
-          perAddressAmount,
-          options?.gasPrice
-        );
-      } else {
-        result = await walletInstance.splitTransferNative(
-          address,
-          perAddressAmount,
-          options?.gasPrice
-        );
+    if (await walletInstance.isDisperseAvailable()) {
+      /* Send each chunk of recipients in a single transaction */
+      for (const recipients of chunk(addresses, DISPERSE_BATCH_SIZE)) {
+        const values = recipients.map(() => value);
+
+        try {
+          const txHash = token.address
+            ? await walletInstance.disperseToken(
+                token.address,
+                recipients,
+                values,
+                gasPrice
+              )
+            : await walletInstance.disperseNative(recipients, values, gasPrice);
+
+          for (const address of recipients) {
+            results.push({
+              status: true,
+              txHash,
+              from,
+              to: address,
+              amount: perAddressAmount,
+            });
+            updateProgress();
+          }
+        } catch (error) {
+          /* Resync nonce in case a transaction was never mined */
+          await walletInstance.initializeNonce();
+
+          for (const address of recipients) {
+            results.push(failed(address, error));
+            updateProgress();
+          }
+        }
       }
-      results.push(result);
-      updateProgress();
+
+      return results;
     }
 
-    return results;
+    /* No Disperse: broadcast all transfers back to back, then wait for receipts */
+    const pending: Promise<TransferResult>[] = [];
+    let broadcastError: unknown = null;
+
+    for (const address of addresses) {
+      /* A failed broadcast leaves a nonce gap that blocks later transfers */
+      if (broadcastError) {
+        pending.push(Promise.resolve(failed(address, broadcastError)));
+        updateProgress();
+        continue;
+      }
+
+      try {
+        const tx = await walletInstance.broadcastTransfer(
+          address,
+          value,
+          gasPrice,
+          token.address
+        );
+
+        pending.push(
+          tx
+            .wait()
+            .then(
+              (receipt): TransferResult => ({
+                status: true,
+                txHash: receipt!.hash,
+                from,
+                to: address,
+                amount: perAddressAmount,
+                gasUsed: receipt!.gasUsed,
+                gasPrice: receipt!.gasPrice,
+              }),
+              (error) => failed(address, error)
+            )
+            .finally(() => updateProgress())
+        );
+      } catch (error) {
+        broadcastError = error;
+        pending.push(Promise.resolve(failed(address, error)));
+        updateProgress();
+      }
+    }
+
+    return Promise.all(pending);
   }
 
   /* Merge (collect) from multiple addresses to a single address */
@@ -1018,10 +1222,35 @@ export class EVMParcel implements Parcel {
     token,
     amount,
   }: Omit<SplitOptions, "updateProgress">): Promise<FeeEstimate> {
+    await this.initializeNetwork();
+
     const perAddressAmount = calculateAmountPerRecipient(
       amount,
       addresses.length
     );
+    const walletInstance = this.createWallet(wallet.privateKey!);
+
+    if (await walletInstance.isDisperseAvailable()) {
+      const value = toBaseUnits(
+        perAddressAmount,
+        token.address
+          ? await walletInstance.getTokenDecimals(token.address)
+          : 18
+      );
+      const { gas, transactions, approximate } =
+        await walletInstance.estimateDisperseGas(
+          addresses,
+          value,
+          token.address
+        );
+      const gasPrice = await walletInstance.getOptimizedGasPrice();
+
+      return {
+        fee: ethers.formatEther(gas * gasPrice),
+        transactions,
+        approximate,
+      };
+    }
 
     /* All transfers are the same shape, so estimate one and multiply */
     const { estimatedCost, approximate } = await this.estimateTransactionGas(
