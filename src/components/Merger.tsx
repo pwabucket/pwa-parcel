@@ -5,10 +5,11 @@ import { AddressesContainer } from "./AddressesContainer";
 import { SectionHeading } from "./SectionHeading";
 import { MergeInformation } from "./MergeInformation";
 import { MergeSender } from "./MergeSender";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AddressForm } from "./AddressForm";
 import { PopupDialog } from "./PopupDialog";
 import { ParcelProgress } from "./ParcelProgress";
+import { FeeEstimateInfo } from "./FeeEstimateInfo";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const Merger = () => {
@@ -26,6 +27,38 @@ const Merger = () => {
     Parcel,
   } = useBlockChainContext();
   const [showReceiverSetup, setShowReceiverSetup] = useState(false);
+
+  const nativeSymbol = blockchain!.tokens.find((t) => !t.address)?.symbol;
+
+  const feeEstimate = useQuery({
+    queryKey: [
+      "estimate-merge",
+      blockchain!.id,
+      senders.map((sender) => sender.address),
+      receiver,
+      token?.address,
+      amount,
+    ],
+    queryFn: () => {
+      const parcelInstance = new Parcel!({
+        mainnet: import.meta.env.PROD,
+        config,
+        mode,
+      });
+
+      return parcelInstance.estimateMerge!({
+        senders,
+        receiver: receiver!,
+        token: token!,
+        amount: amount || "",
+      });
+    },
+    enabled: Boolean(
+      receiver && senders.length > 0 && Parcel?.prototype.estimateMerge
+    ),
+    retry: false,
+    staleTime: 30_000,
+  });
 
   const mutation = useMutation({
     mutationKey: ["split", blockchain!.id, token?.address],
@@ -85,6 +118,16 @@ const Merger = () => {
           <p className="text-lime-500 break-all font-bold font-mono text-center text-sm">
             Receiver Address: {receiver}
           </p>
+        )}
+
+        {/* Fee Estimate */}
+        {receiver && !mutation.isSuccess && (
+          <FeeEstimateInfo
+            estimate={feeEstimate.data}
+            isLoading={feeEstimate.isLoading}
+            isError={feeEstimate.isError}
+            symbol={nativeSymbol}
+          />
         )}
 
         {/* Progress */}

@@ -61,9 +61,27 @@ export interface MergeOptions {
   updateProgress: () => void;
 }
 
+export interface FeeEstimate {
+  /* Estimated native fees spent (human units) */
+  fee: string;
+  /* Native amount attached to messages but mostly refunded (e.g TON jettons) */
+  refundable?: string;
+  /* Merge: native fees each sender wallet needs */
+  feePerSender?: string;
+  transactions: number;
+  /* True when fallback constants were used instead of a network estimate */
+  approximate: boolean;
+}
+
 export interface Parcel {
   split: (splitOptions: SplitOptions) => Promise<TransactionResult[]>;
   merge: (mergeOptions: MergeOptions) => Promise<TransactionResult[]>;
+  estimateSplit?: (
+    splitOptions: Omit<SplitOptions, "updateProgress">
+  ) => Promise<FeeEstimate>;
+  estimateMerge?: (
+    mergeOptions: Omit<MergeOptions, "updateProgress">
+  ) => Promise<FeeEstimate>;
 }
 
 export interface TransactionResult {

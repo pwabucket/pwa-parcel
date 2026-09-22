@@ -7,8 +7,9 @@ import { SplitInformation } from "./SplitInformation";
 import { SplitRecipient } from "./SplitRecipient";
 import { WalletFormDialog } from "./WalletFormDialog";
 import type { Wallet } from "../types";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ParcelProgress } from "./ParcelProgress";
+import { FeeEstimateInfo } from "./FeeEstimateInfo";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
 import { calculateAmountPerRecipient } from "../lib/utils";
 
@@ -32,6 +33,36 @@ const Splitter = () => {
     amount || "0",
     recipients.length
   );
+
+  const nativeSymbol = blockchain!.tokens.find((t) => !t.address)?.symbol;
+
+  const feeEstimate = useQuery({
+    queryKey: [
+      "estimate-split",
+      blockchain!.id,
+      wallet?.address,
+      token?.address,
+      amount,
+      recipients,
+    ],
+    queryFn: () => {
+      const parcelInstance = new Parcel!({
+        mainnet: import.meta.env.PROD,
+        config,
+        mode,
+      });
+
+      return parcelInstance.estimateSplit!({
+        wallet: wallet!,
+        addresses: recipients,
+        token: token!,
+        amount: amount!,
+      });
+    },
+    enabled: Boolean(wallet && Parcel?.prototype.estimateSplit),
+    retry: false,
+    staleTime: 30_000,
+  });
 
   const mutation = useMutation({
     mutationKey: [
@@ -98,6 +129,16 @@ const Splitter = () => {
           <p className="text-lime-500 break-all font-bold font-mono text-center text-sm">
             Wallet Address: {wallet.address}
           </p>
+        )}
+
+        {/* Fee Estimate */}
+        {wallet && !mutation.isSuccess && (
+          <FeeEstimateInfo
+            estimate={feeEstimate.data}
+            isLoading={feeEstimate.isLoading}
+            isError={feeEstimate.isError}
+            symbol={nativeSymbol}
+          />
         )}
 
         {/* Progress */}

@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import type {
+  FeeEstimate,
   MergeOptions,
   Parcel,
   ParcelMode,
@@ -421,6 +422,22 @@ export class EVMWallet {
     recipientAddress?: string,
     amount?: string
   ): Promise<bigint> {
+    const { gas } = await this.estimateGasDetailed(
+      type,
+      tokenAddress,
+      recipientAddress,
+      amount
+    );
+    return gas;
+  }
+
+  /* Estimate gas, flagging when a fallback limit was used */
+  async estimateGasDetailed(
+    type: "native" | "token",
+    tokenAddress?: string,
+    recipientAddress?: string,
+    amount?: string
+  ): Promise<{ gas: bigint; approximate: boolean }> {
     try {
       await this.initializeNetwork();
 
@@ -433,9 +450,9 @@ export class EVMWallet {
             value,
             from: this.wallet.address,
           });
-          return estimatedGas;
+          return { gas: estimatedGas, approximate: false };
         }
-        return FALLBACK_GAS_LIMIT_NATIVE;
+        return { gas: FALLBACK_GAS_LIMIT_NATIVE, approximate: true };
       } else if (
         type === "token" &&
         tokenAddress &&
@@ -455,15 +472,19 @@ export class EVMWallet {
           recipientAddress,
           value
         );
-        return estimatedGas;
+        return { gas: estimatedGas, approximate: false };
       }
 
-      return FALLBACK_GAS_LIMIT_TOKEN;
+      return { gas: FALLBACK_GAS_LIMIT_TOKEN, approximate: true };
     } catch (error) {
       console.warn("Gas estimation failed, using fallback:", error);
-      return type === "native"
-        ? FALLBACK_GAS_LIMIT_NATIVE
-        : FALLBACK_GAS_LIMIT_TOKEN;
+      return {
+        gas:
+          type === "native"
+            ? FALLBACK_GAS_LIMIT_NATIVE
+            : FALLBACK_GAS_LIMIT_TOKEN,
+        approximate: true,
+      };
     }
   }
 
@@ -964,18 +985,21 @@ export class EVMParcel implements Parcel {
     gasLimit: bigint;
     gasPrice: bigint;
     estimatedCost: bigint;
+    approximate: boolean;
   }> {
     await this.initializeNetwork();
 
     const walletInstance = this.createWallet(wallet.privateKey!);
 
-    const gasLimit = await walletInstance.estimateGasWithBuffer(
+    const { gas, approximate } = await walletInstance.estimateGasDetailed(
       type,
       tokenAddress,
       recipientAddress,
       amount
     );
 
+    /* Same 20% safety buffer as estimateGasWithBuffer */
+    const gasLimit = gas + (gas * 20n) / 100n;
     const gasPrice = await walletInstance.getOptimizedGasPrice();
     const estimatedCost = gasLimit * gasPrice;
 
@@ -983,6 +1007,59 @@ export class EVMParcel implements Parcel {
       gasLimit,
       gasPrice,
       estimatedCost,
+      approximate,
+    };
+  }
+
+  /* Estimate total fees for a split */
+  async estimateSplit({
+    wallet,
+    addresses,
+    token,
+    amount,
+  }: Omit<SplitOptions, "updateProgress">): Promise<FeeEstimate> {
+    const perAddressAmount = calculateAmountPerRecipient(
+      amount,
+      addresses.length
+    );
+
+    /* All transfers are the same shape, so estimate one and multiply */
+    const { estimatedCost, approximate } = await this.estimateTransactionGas(
+      wallet,
+      token.address ? "token" : "native",
+      addresses[0],
+      perAddressAmount,
+      token.address
+    );
+
+    return {
+      fee: ethers.formatEther(estimatedCost * BigInt(addresses.length)),
+      transactions: addresses.length,
+      approximate,
+    };
+  }
+
+  /* Estimate total fees for a merge, each sender pays its own gas */
+  async estimateMerge({
+    senders,
+    receiver,
+    token,
+    amount,
+  }: Omit<MergeOptions, "updateProgress">): Promise<FeeEstimate> {
+    /* Use "0" when merging everything so estimation doesn't revert on balance */
+    const { estimatedCost, approximate } = await this.estimateTransactionGas(
+      senders[0],
+      token.address ? "token" : "native",
+      receiver,
+      amount || "0",
+      token.address
+    );
+
+    return {
+      fee: ethers.formatEther(estimatedCost * BigInt(senders.length)),
+      feePerSender: ethers.formatEther(estimatedCost),
+      transactions: senders.length,
+      approximate,
     };
   }
 }

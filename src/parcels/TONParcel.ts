@@ -12,6 +12,7 @@ import {
   internal,
   SendMode,
   type MessageRelaxed,
+  type Cell,
 } from "@ton/ton";
 import { mnemonicNew, mnemonicToWalletKey, type KeyPair } from "@ton/crypto";
 import type {
@@ -21,6 +22,7 @@ import type {
   ParcelParams,
   MergeOptions,
   SplitOptions,
+  FeeEstimate,
 } from "../types";
 import { calculateAmountPerRecipient } from "../lib/utils";
 import Decimal from "decimal.js";
@@ -240,23 +242,21 @@ class TONWallet {
     throw new Error("Wallet deployment timeout");
   }
 
-  /* Sign and send messages in a single external message, returns the seqno used */
-  private async sendMessages(
+  /* Sign a transfer containing messages */
+  private async createTransferCell(
     messages: MessageRelaxed[],
-    sendMode: SendMode
-  ): Promise<number> {
-    const seqno = await this.wallet!.contract.getSeqno();
-
-    let transfer;
+    sendMode: SendMode,
+    seqno: number
+  ): Promise<Cell> {
     if (this.isWalletV4(this.wallet!.contract)) {
-      transfer = await this.wallet!.contract.createTransfer({
+      return await this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
         sendMode,
         messages,
       });
     } else if (this.isWalletV5(this.wallet!.contract)) {
-      transfer = this.wallet!.contract.createTransfer({
+      return this.wallet!.contract.createTransfer({
         seqno,
         secretKey: this.wallet!.keyPair.secretKey,
         sendMode,
@@ -265,10 +265,60 @@ class TONWallet {
     } else {
       throw new Error("Unsupported wallet version");
     }
+  }
+
+  /* Sign and send messages in a single external message, returns the seqno used */
+  private async sendMessages(
+    messages: MessageRelaxed[],
+    sendMode: SendMode
+  ): Promise<number> {
+    const seqno = await this.wallet!.contract.getSeqno();
+    const transfer = await this.createTransferCell(messages, sendMode, seqno);
 
     await this.client.sendExternalMessage(this.wallet!.contract, transfer);
 
     return seqno;
+  }
+
+  /* Estimate fees (in nanoton) for sending messages in a single transaction */
+  async estimateMessagesFee(
+    messages: MessageRelaxed[],
+    sendMode: SendMode
+  ): Promise<{ fee: bigint; approximate: boolean }> {
+    await this.initWallet();
+
+    try {
+      const deployed = await this.isWalletDeployed();
+      const seqno = deployed ? await this.wallet!.contract.getSeqno() : 0;
+      const body = await this.createTransferCell(messages, sendMode, seqno);
+      const init = this.wallet!.contract.init;
+
+      const { source_fees } = await this.client.estimateExternalMessageFee(
+        this.wallet!.address,
+        {
+          body,
+          initCode: deployed ? null : init.code,
+          initData: deployed ? null : init.data,
+          ignoreSignature: true,
+        }
+      );
+
+      const fee =
+        BigInt(source_fees.in_fwd_fee) +
+        BigInt(source_fees.storage_fee) +
+        BigInt(source_fees.gas_fee) +
+        BigInt(source_fees.fwd_fee);
+
+      return { fee, approximate: false };
+    } catch (error) {
+      console.warn("Fee estimation failed, using fallback:", error);
+      return {
+        fee:
+          BATCH_BASE_GAS_ESTIMATE +
+          BATCH_PER_MESSAGE_GAS_ESTIMATE * BigInt(messages.length),
+        approximate: true,
+      };
+    }
   }
 
   /* Max number of messages that can be sent in a single transaction */
@@ -416,6 +466,21 @@ class TONWallet {
     };
   }
 
+  /* Build native TON transfer messages for recipients */
+  buildNativeMessages(recipients: Recipient[]) {
+    const amounts = recipients.map(({ amount }) => toNano(amount));
+    const messages = recipients.map(({ address }, i) =>
+      internal({
+        to: Address.parse(address),
+        value: amounts[i],
+        bounce: false,
+      })
+    );
+    const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0n);
+
+    return { messages, totalAmount };
+  }
+
   /* Send native TON to multiple recipients in a single transaction */
   async batchTransferNativeTon(recipients: Recipient[]) {
     await this.initWallet();
@@ -429,17 +494,9 @@ class TONWallet {
     /* Automatically deploy wallet if not already deployed */
     await this.deployWallet();
 
-    const amounts = recipients.map(({ amount }) => toNano(amount));
-    const messages = recipients.map(({ address }, i) =>
-      internal({
-        to: Address.parse(address),
-        value: amounts[i],
-        bounce: false,
-      })
-    );
+    const { messages, totalAmount } = this.buildNativeMessages(recipients);
 
     /* Check if wallet has sufficient balance for all transfers + gas */
-    const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0n);
     const gasEstimate =
       BATCH_BASE_GAS_ESTIMATE +
       BATCH_PER_MESSAGE_GAS_ESTIMATE * BigInt(messages.length);
@@ -566,6 +623,32 @@ class TONWallet {
     };
   }
 
+  /* Build jetton transfer messages for recipients */
+  async buildJettonMessages(
+    jettonMasterAddress: string,
+    jettonDecimals: number,
+    recipients: Recipient[]
+  ) {
+    const jettonWallet = await this.getJettonWallet(jettonMasterAddress);
+
+    /* Convert amounts using correct decimals */
+    const amounts = recipients.map(({ amount }) =>
+      this.toJettonUnits(amount, jettonDecimals)
+    );
+    const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0n);
+
+    const messages = recipients.map(({ address }, i) =>
+      this.createJettonTransferMessage(
+        jettonWallet.address,
+        address,
+        amounts[i],
+        i
+      )
+    );
+
+    return { jettonWallet, messages, totalAmount };
+  }
+
   /* Send jettons to multiple recipients in a single transaction */
   async batchTransferJetton(
     jettonMasterAddress: string,
@@ -583,13 +666,12 @@ class TONWallet {
     /* Automatically deploy wallet if not already deployed */
     await this.deployWallet();
 
-    const jettonWallet = await this.getJettonWallet(jettonMasterAddress);
-
-    /* Convert amounts using correct decimals */
-    const amounts = recipients.map(({ amount }) =>
-      this.toJettonUnits(amount, jettonDecimals)
-    );
-    const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0n);
+    const { jettonWallet, messages, totalAmount } =
+      await this.buildJettonMessages(
+        jettonMasterAddress,
+        jettonDecimals,
+        recipients
+      );
 
     /* Check if wallet has jetton balance */
     const jettonBalance = await jettonWallet.getBalance();
@@ -616,15 +698,6 @@ class TONWallet {
         )} TON, Available: ${fromNano(currentBalance)} TON`
       );
     }
-
-    const messages = recipients.map(({ address }, i) =>
-      this.createJettonTransferMessage(
-        jettonWallet.address,
-        address,
-        amounts[i],
-        i
-      )
-    );
 
     /* IGNORE_ERRORS: a single invalid message won't abort the whole batch */
     const seqno = await this.sendMessages(
@@ -881,6 +954,148 @@ class TONParcel implements Parcel {
       const results = await Promise.all(transferPromises);
       return results;
     }
+  }
+
+  private getSeedPhrase(wallet: Wallet): string {
+    /* Mnemonic could be in mnemonic or privateKey field */
+    const seedPhrase = wallet.mnemonic || wallet.privateKey;
+    if (!seedPhrase) {
+      throw new Error(
+        "Wallet must have mnemonic or privateKey for TON operations"
+      );
+    }
+    return seedPhrase;
+  }
+
+  async estimateSplit({
+    wallet,
+    addresses,
+    token,
+    amount,
+  }: Omit<SplitOptions, "updateProgress">): Promise<FeeEstimate> {
+    const perAddressAmount = calculateAmountPerRecipient(
+      amount,
+      addresses.length
+    );
+    const tonWallet = this.createWallet(
+      this.getSeedPhrase(wallet),
+      wallet.version as 4 | 5
+    );
+    const jettonDecimals = token.address
+      ? (await this.apiClient.getJettonInfo(token.address)).decimals
+      : 9;
+
+    /* Chunks of the same size cost the same, so estimate each size once */
+    const batchSize = tonWallet.getBatchSize();
+    const fullChunks = Math.floor(addresses.length / batchSize);
+    const remainder = addresses.length % batchSize;
+    const chunks = [
+      { size: batchSize, count: fullChunks },
+      { size: remainder, count: 1 },
+    ].filter(({ size, count }) => size > 0 && count > 0);
+
+    let fee = 0n;
+    let approximate = false;
+
+    for (const { size, count } of chunks) {
+      const recipients = addresses
+        .slice(0, size)
+        .map((address) => ({ address, amount: perAddressAmount }));
+
+      const { messages } = token.address
+        ? await tonWallet.buildJettonMessages(
+            token.address,
+            jettonDecimals,
+            recipients
+          )
+        : tonWallet.buildNativeMessages(recipients);
+
+      const estimate = await tonWallet.estimateMessagesFee(
+        messages,
+        SendMode.PAY_GAS_SEPARATELY | SendMode.IGNORE_ERRORS
+      );
+
+      fee += estimate.fee * BigInt(count);
+      approximate ||= estimate.approximate;
+    }
+
+    /* Undeployed wallets send an extra deployment transaction first */
+    const deployed = await tonWallet.isWalletDeployed();
+
+    return {
+      fee: fromNano(fee),
+      refundable: token.address
+        ? fromNano(JETTON_TRANSFER_VALUE * BigInt(addresses.length))
+        : undefined,
+      transactions: chunks.reduce((sum, { count }) => sum + count, 0) +
+        (deployed ? 0 : 1),
+      approximate,
+    };
+  }
+
+  async estimateMerge({
+    senders,
+    receiver,
+    token,
+    amount,
+  }: Omit<MergeOptions, "updateProgress">): Promise<FeeEstimate> {
+    const jettonDecimals = token.address
+      ? (await this.apiClient.getJettonInfo(token.address)).decimals
+      : 9;
+
+    /* Senders with the same wallet version cost the same, so estimate each version once */
+    const groups = new Map<4 | 5, { sender: Wallet; count: number }>();
+    for (const sender of senders) {
+      const version = sender.version === 4 ? 4 : 5;
+      const group = groups.get(version);
+      if (group) {
+        group.count++;
+      } else {
+        groups.set(version, { sender, count: 1 });
+      }
+    }
+
+    const recipients = [{ address: receiver, amount: amount || "0" }];
+
+    let fee = 0n;
+    let feePerSender = 0n;
+    let approximate = false;
+
+    for (const [version, { sender, count }] of groups) {
+      const tonWallet = this.createWallet(this.getSeedPhrase(sender), version);
+
+      const estimate = token.address
+        ? await tonWallet.estimateMessagesFee(
+            (
+              await tonWallet.buildJettonMessages(
+                token.address,
+                jettonDecimals,
+                recipients
+              )
+            ).messages,
+            SendMode.PAY_GAS_SEPARATELY
+          )
+        : await tonWallet.estimateMessagesFee(
+            tonWallet.buildNativeMessages(recipients).messages,
+            amount
+              ? SendMode.PAY_GAS_SEPARATELY
+              : SendMode.CARRY_ALL_REMAINING_BALANCE
+          );
+
+      fee += estimate.fee * BigInt(count);
+      if (estimate.fee > feePerSender) feePerSender = estimate.fee;
+      approximate ||= estimate.approximate;
+    }
+
+    return {
+      fee: fromNano(fee),
+      feePerSender: fromNano(feePerSender),
+      refundable: token.address
+        ? fromNano(JETTON_TRANSFER_VALUE * BigInt(senders.length))
+        : undefined,
+      transactions: senders.length,
+      approximate,
+    };
   }
 
   async generateTestMnemonic() {
