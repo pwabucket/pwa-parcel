@@ -19,28 +19,20 @@ export const NETWORKS = {
     nativeCurrency: "BNB",
   },
   base: {
-    mainnet: `https://base-mainnet.infura.io/v3/${
-      import.meta.env.VITE_INFURA_API_KEY
-    }`,
-    testnet: `https://base-testnet.infura.io/v3/${
-      import.meta.env.VITE_INFURA_API_KEY
-    }`,
+    mainnet: "https://mainnet.base.org",
+    testnet: "https://sepolia.base.org" /* Base Sepolia */,
     nativeCurrency: "ETH",
   },
 
   ethereum: {
-    mainnet: `https://mainnet.infura.io/v3/${
-      import.meta.env.VITE_INFURA_API_KEY
-    }`,
-    testnet: `https://sepolia.infura.io/v3/${
-      import.meta.env.VITE_INFURA_API_KEY
-    }`,
+    mainnet: "https://ethereum-rpc.publicnode.com",
+    testnet: "https://ethereum-sepolia-rpc.publicnode.com" /* Sepolia */,
     nativeCurrency: "ETH",
   },
   polygon: {
-    mainnet: "https://polygon-rpc.com/",
-    testnet: "https://rpc-mumbai.maticvigil.com/",
-    nativeCurrency: "MATIC",
+    mainnet: "https://polygon-bor-rpc.publicnode.com",
+    testnet: "https://polygon-amoy-bor-rpc.publicnode.com" /* Amoy */,
+    nativeCurrency: "POL",
   },
   avalanche: {
     mainnet: "https://api.avax.network/ext/bc/C/rpc",
@@ -49,17 +41,17 @@ export const NETWORKS = {
   },
   arbitrum: {
     mainnet: "https://arb1.arbitrum.io/rpc",
-    testnet: "https://rinkeby.arbitrum.io/rpc",
+    testnet: "https://sepolia-rollup.arbitrum.io/rpc" /* Arbitrum Sepolia */,
     nativeCurrency: "ETH",
   },
   optimism: {
     mainnet: "https://mainnet.optimism.io",
-    testnet: "https://kovan.optimism.io",
+    testnet: "https://sepolia.optimism.io" /* OP Sepolia */,
     nativeCurrency: "ETH",
   },
   fantom: {
-    mainnet: "https://rpc.ftm.tools/",
-    testnet: "https://rpc.testnet.fantom.network/",
+    mainnet: "https://rpcapi.fantom.network",
+    testnet: "https://rpc.testnet.fantom.network/" /* No longer responding */,
     nativeCurrency: "FTM",
   },
 } as const;
@@ -156,7 +148,7 @@ function detectNetworkFromChainId(chainId: bigint): {
       return { network: "ethereum", mainnet: false };
     case 137:
       return { network: "polygon", mainnet: true };
-    case 80001:
+    case 80002:
       return { network: "polygon", mainnet: false };
     case 43114:
       return { network: "avalanche", mainnet: true };
@@ -164,12 +156,16 @@ function detectNetworkFromChainId(chainId: bigint): {
       return { network: "avalanche", mainnet: false };
     case 42161:
       return { network: "arbitrum", mainnet: true };
-    case 421611:
+    case 421614:
       return { network: "arbitrum", mainnet: false };
     case 10:
       return { network: "optimism", mainnet: true };
-    case 69:
+    case 11155420:
       return { network: "optimism", mainnet: false };
+    case 8453:
+      return { network: "base", mainnet: true };
+    case 84532:
+      return { network: "base", mainnet: false };
     case 250:
       return { network: "fantom", mainnet: true };
     case 4002:

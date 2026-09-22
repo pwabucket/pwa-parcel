@@ -14,7 +14,7 @@ export const tokens: Token[] = [
     id: "usdt",
     name: "Tether",
     symbol: "USDT",
-    decimals: 18,
+    decimals: 6,
     address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
   },
 ];
