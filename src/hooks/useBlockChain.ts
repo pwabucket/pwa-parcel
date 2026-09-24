@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate, type Location } from "react-router";
 import { blockchains } from "../resources/blockchains";
-import type { Token, Wallet } from "../types";
+import type { ParcelMode, Token, Wallet } from "../types";
 import { useNavigateBack } from "@pwabucket/pwa-router";
 import { useOpenerHandler } from "./useOpenerHandler";
 
@@ -28,6 +28,7 @@ interface OpenerEventData {
   wallet?: Wallet;
   receiver?: string;
   config?: Record<string, unknown>;
+  mode?: ParcelMode;
 }
 
 const useBlockchain = () => {
@@ -39,7 +40,7 @@ const useBlockchain = () => {
   /* State to track if opened from external opener */
   const [fromOpener, setFromOpener] = useState<boolean>(false);
 
-  const [mode, setMode] = useState<"single" | "batch">("single");
+  const [mode, setMode] = useState<ParcelMode>("single");
   const [progress, setProgress] = useState<number>(0);
 
   /* Split States */
@@ -207,7 +208,12 @@ const useBlockchain = () => {
 
   /* Cancel Config Setup */
   const cancelConfigSetup = () => {
-    navigateBack();
+    if (fromOpener) {
+      /* Opener navigation replaced history, so fall back to an empty config */
+      setConfig({});
+    } else {
+      navigateBack();
+    }
   };
 
   /* Progress Management */
@@ -239,13 +245,9 @@ const useBlockchain = () => {
         /* Update Blockchain */
         state.blockchain = event.data.blockchain;
 
-        /* Update Config */
-        if (blockchain.ConfigForm) {
-          if (event.data.config) {
-            state.config = event.data.config;
-          } else {
-            state.config = {};
-          }
+        /* Update Config (left unset so the user is prompted if missing) */
+        if (blockchain.ConfigForm && event.data.config) {
+          state.config = event.data.config;
         }
       }
 
@@ -253,7 +255,7 @@ const useBlockchain = () => {
       if (typeof event.data.token !== "string") {
         state.token = event.data.token;
       } else {
-        const token = blockchain.tokens.find((t) => t.id === event.data.token);
+        const token = blockchain?.tokens.find((t) => t.id === event.data.token);
         if (token) {
           state.token = token;
         }
@@ -285,6 +287,11 @@ const useBlockchain = () => {
       /* Update Receiver */
       if (event.data.receiver) {
         setReceiver(event.data.receiver);
+      }
+
+      /* Update Mode */
+      if (event.data.mode === "single" || event.data.mode === "batch") {
+        setMode(event.data.mode);
       }
 
       /* Mark as from opener */

@@ -10,6 +10,7 @@ import { AddressForm } from "./AddressForm";
 import { PopupDialog } from "./PopupDialog";
 import { ParcelProgress } from "./ParcelProgress";
 import { FeeEstimateInfo } from "./FeeEstimateInfo";
+import { ModeSelector } from "./ModeSelector";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const Merger = () => {
@@ -24,6 +25,7 @@ const Merger = () => {
     resetProgress,
     updateProgress,
     configureReceiver,
+    showConfigForm,
     Parcel,
   } = useBlockChainContext();
   const [showReceiverSetup, setShowReceiverSetup] = useState(false);
@@ -147,6 +149,9 @@ const Merger = () => {
         </PopupDialog>
       )}
 
+      {/* Mode */}
+      <ModeSelector disabled={mutation.isPending || mutation.isSuccess} />
+
       {/* Merge Button */}
       {mutation.isSuccess ? (
         <p className="text-center text-purple-400 font-display text-2xl">
@@ -157,7 +162,10 @@ const Merger = () => {
           Merge failed. Please try again.
         </p>
       ) : (
-        <Button disabled={mutation.isPending} onClick={() => mergeTokens()}>
+        <Button
+          disabled={mutation.isPending || showConfigForm}
+          onClick={() => mergeTokens()}
+        >
           {mutation.isPending
             ? "Merging..."
             : receiver

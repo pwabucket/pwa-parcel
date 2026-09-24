@@ -1,6 +1,7 @@
 import { InnerPageLayout } from "../layouts/InnerPageLayout";
 import { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainSetup } from "../components/BlockchainSetup";
+import { ConfigSetup } from "../components/ConfigSetup";
 import type { Wallet } from "../types";
 import { MergeSendersForm } from "../components/MergeSendersForm";
 import { Merger } from "../components/Merger";
@@ -43,6 +44,9 @@ const Merge = () => {
         ) : (
           <BlockchainSetup />
         )}
+
+        {/* Prompt for missing config (e.g when opened with pre-filled data) */}
+        {isTokenSelected && <ConfigSetup />}
       </BlockchainContext.Provider>
     </InnerPageLayout>
   );

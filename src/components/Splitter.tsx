@@ -26,6 +26,7 @@ const Splitter = () => {
     updateProgress,
     configureWallet,
     WalletForm,
+    showConfigForm,
     Parcel,
   } = useBlockChainContext();
   const [showWalletSetup, setShowWalletSetup] = useState(false);
@@ -162,7 +163,10 @@ const Splitter = () => {
           Split failed. Please try again.
         </p>
       ) : (
-        <Button disabled={mutation.isPending} onClick={() => splitTokens()}>
+        <Button
+          disabled={mutation.isPending || showConfigForm}
+          onClick={() => splitTokens()}
+        >
           {mutation.isPending
             ? "Splitting..."
             : wallet

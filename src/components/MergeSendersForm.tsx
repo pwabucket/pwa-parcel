@@ -17,7 +17,7 @@ import { AddressesContainer } from "./AddressesContainer";
 import { MergeInformation } from "./MergeInformation";
 import { WalletFormDialog } from "./WalletFormDialog";
 import type { Wallet } from "../types";
-import { cn } from "../lib/utils";
+import { ModeSelector } from "./ModeSelector";
 import { useBlockChainContext } from "../hooks/useBlockchainContext";
 
 const schema = yup.object({
@@ -48,8 +48,7 @@ interface MergeSendersFormProps {
 
 const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
   const [showAddSenderDialog, setShowAddSenderDialog] = useState(false);
-  const { mode, token, amount, senders, WalletForm, setMode } =
-    useBlockChainContext();
+  const { token, amount, senders, WalletForm } = useBlockChainContext();
   const form = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -99,30 +98,8 @@ const MergeSendersForm = ({ onSubmit }: MergeSendersFormProps) => {
         {WalletForm && <WalletForm onSubmit={addSender} />}
       </WalletFormDialog>
 
-      {/* Mode Selection */}
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          variant={"outline"}
-          className={cn(mode === "single" && "text-purple-300 font-bold")}
-          onClick={() => setMode("single")}
-        >
-          Single Mode
-        </Button>
-        <Button
-          variant={"outline"}
-          className={cn(mode === "batch" && "text-purple-300 font-bold")}
-          onClick={() => setMode("batch")}
-        >
-          Batch Mode
-        </Button>
-      </div>
-
-      {/* Mode Information */}
-      <p className="text-purple-300 text-sm text-center">
-        {mode === "single"
-          ? "Single mode selected - transactions will be processed sequentially. (Recommended for most users)"
-          : "Batch mode selected - transactions will be processed in parallel."}
-      </p>
+      {/* Mode */}
+      <ModeSelector />
 
       {/* Form */}
       <FormProvider {...form}>

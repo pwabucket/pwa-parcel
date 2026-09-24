@@ -1,6 +1,7 @@
 import { InnerPageLayout } from "../layouts/InnerPageLayout";
 import { useBlockchain } from "../hooks/useBlockChain";
 import { BlockchainSetup } from "../components/BlockchainSetup";
+import { ConfigSetup } from "../components/ConfigSetup";
 import { SplitAmountForm } from "../components/SplitAmountForm";
 import { SplitRecipientsForm } from "../components/SplitRecipientsForm";
 import { Splitter } from "../components/Splitter";
@@ -40,6 +41,9 @@ const Split = () => {
         ) : (
           <BlockchainSetup />
         )}
+
+        {/* Prompt for missing config (e.g when opened with pre-filled data) */}
+        {isTokenSelected && <ConfigSetup />}
       </BlockchainContext.Provider>
     </InnerPageLayout>
   );
