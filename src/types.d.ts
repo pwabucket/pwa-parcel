@@ -58,6 +58,8 @@ export interface MergeOptions {
   receiver: string;
   token: Token;
   amount?: string;
+  /* When true, amount is kept in each sender and the rest is sent */
+  retain?: boolean;
   updateProgress: () => void;
 }
 

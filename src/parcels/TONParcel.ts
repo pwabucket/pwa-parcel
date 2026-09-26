@@ -844,6 +844,7 @@ class TONParcel implements Parcel {
     receiver,
     token,
     amount,
+    retain,
     updateProgress,
   }: MergeOptions): Promise<TransactionResult[]> {
     let jettonDecimals = 9;
@@ -875,10 +876,22 @@ class TONParcel implements Parcel {
       try {
         let result;
 
+        /* Amount is what to keep in the wallet rather than what to send */
+        const retaining = Boolean(amount && retain);
+
         if (!token.address) {
           let transferAmount = amount;
 
-          if (!transferAmount) {
+          if (retaining) {
+            /* Send balance minus retained amount and gas, gas paid separately */
+            const balance = await tonWallet.getNativeTonBalance();
+            const available =
+              toNano(balance) - toNano(amount!) - toNano("0.0055");
+            if (available <= 0n) {
+              throw new Error("Balance does not exceed retained amount");
+            }
+            transferAmount = fromNano(available);
+          } else if (!transferAmount) {
             /* If amount not specified, transfer entire balance minus gas */
             const balance = await tonWallet.getNativeTonBalance();
             const balanceNano = toNano(balance);
@@ -893,12 +906,25 @@ class TONParcel implements Parcel {
           result = await tonWallet.transferNativeTon(
             receiver,
             transferAmount,
-            !amount /* Include gas if amount not specified */
+            !amount /* Include gas if amount not specified (never when retaining) */
           );
         } else {
           let transferAmount = amount;
 
-          if (!transferAmount) {
+          if (retaining) {
+            /* Send jetton balance minus retained amount */
+            const balance = await tonWallet.getJettonBalance(
+              token.address,
+              jettonDecimals
+            );
+            const available = new Decimal(balance)
+              .minus(amount!)
+              .toDecimalPlaces(jettonDecimals, Decimal.ROUND_DOWN);
+            if (available.lte(0)) {
+              throw new Error("Balance does not exceed retained amount");
+            }
+            transferAmount = available.toFixed();
+          } else if (!transferAmount) {
             /* If amount not specified, transfer entire jetton balance */
             const balance = await tonWallet.getJettonBalance(
               token.address,
@@ -1038,6 +1064,7 @@ class TONParcel implements Parcel {
     receiver,
     token,
     amount,
+    retain,
   }: Omit<MergeOptions, "updateProgress">): Promise<FeeEstimate> {
     const jettonDecimals = token.address
       ? (await this.apiClient.getJettonInfo(token.address)).decimals
@@ -1055,7 +1082,10 @@ class TONParcel implements Parcel {
       }
     }
 
-    const recipients = [{ address: receiver, amount: amount || "0" }];
+    /* When retaining, the amount sent is unknown until the balance is read */
+    const recipients = [
+      { address: receiver, amount: (!retain && amount) || "0" },
+    ];
 
     let fee = 0n;
     let feePerSender = 0n;

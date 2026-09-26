@@ -4,6 +4,7 @@ import type { Token } from "../types";
 /** Props for Merge Information */
 interface MergeInformationProps {
   amount?: string;
+  retain?: boolean;
   token?: Token;
   totalSenders: number;
 }
@@ -12,12 +13,13 @@ interface MergeInformationProps {
 const MergeInformation = ({
   token,
   amount,
+  retain,
   totalSenders,
 }: MergeInformationProps) => (
   <p className="text-sm px-4 text-center">
     Merge{" "}
     <span className="font-bold text-lime-300">
-      {amount ? `${amount}` : "all available"}
+      {amount ? (retain ? `all but ${amount}` : amount) : "all available"}
     </span>{" "}
     <span className="font-bold">
       <img

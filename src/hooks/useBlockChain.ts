@@ -9,6 +9,7 @@ interface BlockchainLocationState {
   blockchain?: string;
   token?: Token;
   amount?: string;
+  retain?: boolean;
   group?: string;
   receiver?: string;
   recipients?: string[];
@@ -22,6 +23,7 @@ interface OpenerEventData {
   blockchain: string;
   token: string | Token;
   amount?: string;
+  retain?: boolean;
   group?: string;
   recipients?: string[];
   senders?: Wallet[];
@@ -56,6 +58,7 @@ const useBlockchain = () => {
   const group: string | null = location.state?.group ?? null;
   const token: Token | null = location.state?.token || null;
   const amount: string | null = location.state?.amount ?? null;
+  const retain = Boolean(location.state?.retain);
   const blockchain = location.state?.blockchain
     ? blockchains[location.state?.blockchain]
     : null;
@@ -148,11 +151,12 @@ const useBlockchain = () => {
   };
 
   /* Set Amount */
-  const setAmount = (amount: string) => {
+  const setAmount = (amount: string, retain: boolean = false) => {
     navigate(location, {
       state: {
         ...location.state,
         amount,
+        retain,
       },
     });
   };
@@ -266,6 +270,11 @@ const useBlockchain = () => {
         state.amount = event.data.amount;
       }
 
+      /* Update Retain */
+      if (event.data.retain) {
+        state.retain = true;
+      }
+
       /* Update Recipients */
       if (event.data.recipients && Array.isArray(event.data.recipients)) {
         state.recipients = event.data.recipients;
@@ -311,6 +320,7 @@ const useBlockchain = () => {
     blockchain,
     group,
     amount,
+    retain,
     wallet,
     receiver,
     senders,

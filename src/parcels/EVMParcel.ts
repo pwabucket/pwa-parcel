@@ -1011,6 +1011,7 @@ export class EVMParcel implements Parcel {
     receiver,
     token,
     amount,
+    retain,
     updateProgress,
     options = {},
   }: MergeOptions & {
@@ -1029,9 +1030,20 @@ export class EVMParcel implements Parcel {
       try {
         let amountToSend: string;
 
+        /* Amount is what to keep in the wallet rather than what to send */
+        const retaining = Boolean(amount && retain);
+
         if (token.address) {
           /* Token merge */
-          if (amount) {
+          if (retaining) {
+            const decimals = await wallet.getTokenDecimals(token.address);
+            const balance = await wallet.getTokenBalance(token.address);
+            const available =
+              toBaseUnits(balance, decimals) - toBaseUnits(amount!, decimals);
+
+            amountToSend =
+              available > 0n ? ethers.formatUnits(available, decimals) : "0";
+          } else if (amount) {
             amountToSend = amount;
           } else {
             const balance = await wallet.getTokenBalance(token.address);
@@ -1039,7 +1051,7 @@ export class EVMParcel implements Parcel {
           }
         } else {
           /* Native merge */
-          if (amount) {
+          if (amount && !retaining) {
             amountToSend = amount;
           } else {
             /* Merge everything but deduct estimated gas cost */
@@ -1057,8 +1069,9 @@ export class EVMParcel implements Parcel {
             );
             const gasCost = gasPrice * gasLimit;
 
-            /* Calculate available amount after gas */
-            const availableWei = balanceWei - gasCost;
+            /* Calculate available amount after gas (and retained amount) */
+            const retainWei = retaining ? toBaseUnits(amount!, 18) : 0n;
+            const availableWei = balanceWei - gasCost - retainWei;
 
             if (availableWei <= 0n) {
               amountToSend = "0";
@@ -1075,7 +1088,9 @@ export class EVMParcel implements Parcel {
             from: await wallet.getAddress(),
             to: receiver,
             amount: "0",
-            error: "Insufficient balance to merge",
+            error: retaining
+              ? "Balance does not exceed retained amount"
+              : "Insufficient balance to merge",
           };
         }
 
@@ -1270,13 +1285,14 @@ export class EVMParcel implements Parcel {
     receiver,
     token,
     amount,
+    retain,
   }: Omit<MergeOptions, "updateProgress">): Promise<FeeEstimate> {
-    /* Use "0" when merging everything so estimation doesn't revert on balance */
+    /* Use "0" when merging everything (or retaining) so estimation doesn't revert on balance */
     const { estimatedCost, approximate } = await this.estimateTransactionGas(
       senders[0],
       token.address ? "token" : "native",
       receiver,
-      amount || "0",
+      (!retain && amount) || "0",
       token.address
     );
 

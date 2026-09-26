@@ -17,6 +17,7 @@ const Merger = () => {
   const {
     blockchain,
     amount,
+    retain,
     mode,
     config,
     receiver,
@@ -40,6 +41,7 @@ const Merger = () => {
       receiver,
       token?.address,
       amount,
+      retain,
     ],
     queryFn: () => {
       const parcelInstance = new Parcel!({
@@ -53,6 +55,7 @@ const Merger = () => {
         receiver: receiver!,
         token: token!,
         amount: amount || "",
+        retain,
       });
     },
     enabled: Boolean(
@@ -82,6 +85,7 @@ const Merger = () => {
         receiver: receiver!,
         token: token!,
         amount: amount || "",
+        retain,
         updateProgress,
       });
     },
@@ -112,6 +116,7 @@ const Merger = () => {
         {/* Merge information */}
         <MergeInformation
           amount={amount || ""}
+          retain={retain}
           token={token!}
           totalSenders={senders.length}
         />

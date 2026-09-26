@@ -40,7 +40,9 @@ const Merge = () => {
             }
           />
         ) : isTokenSelected ? (
-          <MergeAmountForm onSubmit={(data) => setAmount(data.amount || "")} />
+          <MergeAmountForm
+            onSubmit={(data) => setAmount(data.amount || "", data.retain)}
+          />
         ) : (
           <BlockchainSetup />
         )}
